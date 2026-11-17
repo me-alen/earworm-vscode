@@ -1,0 +1,115 @@
+{
+  "name": "backbeat",
+  "displayName": "Backbeat",
+  "description": "Control the Spotify desktop app from VS Code. No sign-in needed.",
+  "version": "0.1.0",
+  "publisher": "me-alen",
+  "license": "UNLICENSED",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/me-alen/backbeat-vscode.git"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "spotify",
+    "music",
+    "player",
+    "status bar"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "backbeat.playPause",
+        "title": "Play/Pause",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.next",
+        "title": "Next Track",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.previous",
+        "title": "Previous Track",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.volumeUp",
+        "title": "Volume Up",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.volumeDown",
+        "title": "Volume Down",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.toggleMute",
+        "title": "Mute/Unmute",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.toggleShuffle",
+        "title": "Toggle Shuffle",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.toggleRepeat",
+        "title": "Toggle Repeat",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.openSpotify",
+        "title": "Open Spotify",
+        "category": "Backbeat"
+      }
+    ],
+    "configuration": {
+      "title": "Backbeat",
+      "properties": {
+        "backbeat.refreshInterval": {
+          "type": "number",
+          "default": 2,
+          "minimum": 1,
+          "description": "Seconds between now-playing updates. Updates pause while the window is not focused."
+        },
+        "backbeat.showButtons": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show previous / play-pause / next buttons in the status bar."
+        },
+        "backbeat.volumeStep": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "How much Volume Up / Volume Down change the volume (0–100)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "test": "npm run compile && node --test 'out/test/**/*.test.js'",
+    "package": "npm run compile && npx --yes @vscode/vsce package --skip-license"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/vscode": "1.90",
+    "typescript": "^7.0.2"
+  }
+}

@@ -75,8 +75,8 @@ dashboard, show the exact redirect URI to paste, and check the result.
 | Linux control | D-Bus (MPRIS) through `dbus-send` | Present on every desktop distro. |
 | Windows control | PowerShell + WinRT | Built into Windows 10 and 11; no native module. |
 | Webview (now-playing, lyrics) | Plain TypeScript, HTML and CSS | One small view does not justify a framework. Add Preact later only if the UI grows. |
-| Bundling | esbuild | Fast; the bundler VS Code's docs recommend. |
-| Tests | Vitest for the logic; `@vscode/test-electron` for integration | |
+| Bundling | Plain `tsc` for now | With no runtime dependencies there is nothing to bundle. Add esbuild when the first one arrives. |
+| Tests | `node:test` (built into Node) for the logic; `@vscode/test-electron` for integration later | No test framework to install. |
 | CI and publishing | GitHub Actions, `@vscode/vsce`, `ovsx` | |
 
 **No compiled native modules** (nothing built with `node-gyp`). They break across Electron

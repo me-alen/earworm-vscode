@@ -3,8 +3,28 @@
 A VS Code extension for controlling Spotify while you code. It is meant to replace
 `shyykoserhiy.vscode-spotify`, which has had no commits since January 2023 and has 89 open issues.
 
-Status: planning. No code yet.
+Status: **MVP, macOS only.** Controls the Spotify desktop app through AppleScript, with no
+sign-in, so it works with Spotify Free.
 
+## What works
+- Status bar: previous / play-pause / next buttons and the current track (click it to open Spotify)
+- Commands (search "Backbeat" in the command palette, bind any of them to keys): Play/Pause,
+  Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify
+- Settings: `backbeat.refreshInterval` (seconds, default 2), `backbeat.showButtons`, `backbeat.volumeStep`
+- Polling stops while the VS Code window is not focused
+
+The first time it runs, macOS asks whether VS Code may control Spotify. Allow it, or later
+under System Settings → Privacy & Security → Automation.
+
+## Develop
+```bash
+npm install
+npm test          # compiles and runs the unit tests
+npm run package   # builds backbeat-<version>.vsix
+```
+Press F5 in VS Code to open a window with the extension loaded.
+
+## Docs
 - [ANALYSIS.md](ANALYSIS.md): what is possible today, what is not, and which languages to use
 - [REQUIREMENTS.md](REQUIREMENTS.md): the requirements list, with priorities
 
