@@ -9,8 +9,10 @@ Researched 2026-11-17.
 - Last commit 2023-01-06. 89 open issues. The repo is not archived, but nobody maintains it.
 - Commands: play/pause, next/previous, volume and mute, shuffle, repeat, seek, lyrics,
   sign in/out, and loading playlists, albums and tracks.
-- It controlled the desktop app through the OS (AppleScript on macOS, D-Bus on Linux) and
-  used the Web API for the library, all behind **one shared Client ID**.
+- It controlled the desktop app through the OS on macOS (AppleScript) and Linux (D-Bus and
+  `pactl`). On **Windows it used only the Web API, so it needed Premium** there. Playlists and
+  tracks always went through the Web API, all behind **one shared Client ID**.
+- On Linux, shuffle and repeat could only be displayed, not toggled.
 
 A shared Client ID can no longer work for a public extension, because of the Spotify changes
 below.
