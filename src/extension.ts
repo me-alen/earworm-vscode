@@ -1,18 +1,23 @@
 import * as vscode from 'vscode';
-import * as player from './macos';
+import { NotRunningError, PlayerState } from './common';
+import * as macos from './macos';
+import * as linux from './linux';
 
 const config = () => vscode.workspace.getConfiguration('backbeat');
+const backends: Partial<Record<NodeJS.Platform, typeof macos | typeof linux>> = { darwin: macos, linux };
 
 export function activate(context: vscode.ExtensionContext) {
-  if (process.platform !== 'darwin') {
+  const backend = backends[process.platform];
+  if (!backend) {
     if (!context.globalState.get('warnedPlatform')) {
       void context.globalState.update('warnedPlatform', true);
-      void vscode.window.showInformationMessage('Backbeat supports macOS only for now. Linux and Windows support is planned.');
+      void vscode.window.showInformationMessage('Backbeat supports macOS and Linux for now. Windows support is planned.');
     }
     return;
   }
+  const player = backend; // a fresh const keeps the narrowed type inside the closures below
 
-  const item = (priority: number, command: string, label: string, text?: string) => {
+  const item =(priority: number, command: string, label: string, text?: string) => {
     const i = vscode.window.createStatusBarItem(`backbeat.${label}`, vscode.StatusBarAlignment.Left, priority);
     i.name = `Backbeat: ${label}`;
     i.command = command;
@@ -30,7 +35,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   let lastVolume: number | undefined; // volume before muting, restored on unmute
 
-  function render(state: player.PlayerState) {
+  function render(state: PlayerState) {
     trackItem.show();
     if (state.kind === 'notRunning') {
       buttons.forEach(b => b.hide());
@@ -46,7 +51,7 @@ export function activate(context: vscode.ExtensionContext) {
     const t = state.track;
     const label = t ? `${t.name} — ${t.artist}` : 'Not playing';
     trackItem.text = `$(music) ${label.length > 50 ? label.slice(0, 49) + '…' : label}`;
-    trackItem.tooltip = t ? `${t.name}\n${t.artist} — ${t.album}\nVolume ${state.volume}` : 'Nothing is playing';
+    trackItem.tooltip = t ? `${t.name}\n${t.artist} — ${t.album}` : 'Nothing is playing';
     trackItem.accessibilityInformation = { label: t ? `Now playing ${t.name} by ${t.artist}` : 'Nothing is playing' };
   }
 
@@ -73,7 +78,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   async function showError(err: unknown) {
-    if (err instanceof player.NotRunningError) {
+    if (err instanceof NotRunningError) {
       if (await vscode.window.showInformationMessage(err.message, 'Open Spotify') === 'Open Spotify') await player.open();
     } else {
       void vscode.window.showErrorMessage(`Backbeat: ${err instanceof Error ? err.message : String(err)}`);
@@ -87,11 +92,7 @@ export function activate(context: vscode.ExtensionContext) {
       setTimeout(() => void refresh(), 250);
     });
 
-  async function changeVolume(delta: number) {
-    const s = await player.getState();
-    if (s.kind === 'notRunning') throw new player.NotRunningError();
-    await player.setVolume(s.volume + delta);
-  }
+  const changeVolume = async (delta: number) => player.setVolume(await player.getVolume() + delta);
 
   context.subscriptions.push(
     command('playPause', player.playPause),
@@ -103,10 +104,9 @@ export function activate(context: vscode.ExtensionContext) {
     command('volumeUp', () => changeVolume(config().get('volumeStep', 10))),
     command('volumeDown', () => changeVolume(-config().get('volumeStep', 10))),
     command('toggleMute', async () => {
-      const s = await player.getState();
-      if (s.kind === 'notRunning') throw new player.NotRunningError();
-      if (s.volume > 0) {
-        lastVolume = s.volume;
+      const volume = await player.getVolume();
+      if (volume > 0) {
+        lastVolume = volume;
         await player.setVolume(0);
       } else {
         await player.setVolume(lastVolume ?? 50);

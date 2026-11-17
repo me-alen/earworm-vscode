@@ -1,16 +1,7 @@
 // Controls the Spotify desktop app on macOS through its AppleScript dictionary.
 // Kept free of the `vscode` module so the parser can be unit-tested with plain Node.
 import { execFile } from 'node:child_process';
-
-export interface Track { name: string; artist: string; album: string }
-
-export type PlayerState =
-  | { kind: 'notRunning' }
-  | { kind: 'running'; playing: boolean; volume: number; track?: Track };
-
-export class NotRunningError extends Error {
-  constructor() { super('Spotify is not running.'); }
-}
+import { NotRunningError, PlayerState } from './common';
 
 export class PermissionError extends Error {
   constructor() {
@@ -33,7 +24,7 @@ return "${NOT_RUNNING}"`;
 }
 
 const STATE_SCRIPT = guarded(`set s to character id 31
-    set out to (player state as string) & s & (sound volume as string)
+    set out to (player state as string)
     if player state is not stopped then
       set t to current track
       set out to out & s & (name of t) & s & (artist of t) & s & (album of t)
@@ -43,12 +34,11 @@ const STATE_SCRIPT = guarded(`set s to character id 31
 export function parseState(out: string): PlayerState {
   if (out === NOT_RUNNING) return { kind: 'notRunning' };
   const parts = out.split(SEP);
-  const volume = Number(parts[1]);
-  if (!['playing', 'paused', 'stopped'].includes(parts[0]) || (parts.length !== 2 && parts.length !== 5) || !Number.isFinite(volume)) {
+  if (!['playing', 'paused', 'stopped'].includes(parts[0]) || (parts.length !== 1 && parts.length !== 4)) {
     throw new Error(`Unexpected reply from Spotify: ${JSON.stringify(out)}`);
   }
-  const [state, , name, artist, album] = parts;
-  return { kind: 'running', playing: state === 'playing', volume, track: name === undefined ? undefined : { name, artist, album } };
+  const [state, name, artist, album] = parts;
+  return { kind: 'running', playing: state === 'playing', track: name === undefined ? undefined : { name, artist, album } };
 }
 
 function osascript(script: string): Promise<string> {
@@ -68,20 +58,25 @@ export async function getState(): Promise<PlayerState> {
   return parseState(await osascript(STATE_SCRIPT));
 }
 
-async function control(body: string): Promise<void> {
-  const out = await osascript(guarded(`${body}\n    return "ok"`));
+async function control(body: string): Promise<string> {
+  const out = await osascript(guarded(body));
   if (out === NOT_RUNNING) throw new NotRunningError();
+  return out;
 }
 
-export const playPause = () => control('playpause');
-export const next = () => control('next track');
-export const previous = () => control('previous track');
-export const toggleShuffle = () => control('set shuffling to not shuffling');
-export const toggleRepeat = () => control('set repeating to not repeating');
+export async function getVolume(): Promise<number> {
+  return Number(await control('return sound volume as string'));
+}
+
+export const playPause = () => control('playpause\n    return "ok"');
+export const next = () => control('next track\n    return "ok"');
+export const previous = () => control('previous track\n    return "ok"');
+export const toggleShuffle = () => control('set shuffling to not shuffling\n    return "ok"');
+export const toggleRepeat = () => control('set repeating to not repeating\n    return "ok"');
 // Spotify stores one less than it is given (set 55, read 54), so send one more. 0 stays 0.
 export const volumeToSend = (v: number) => {
   const target = Math.round(Math.min(100, Math.max(0, v)));
   return target === 0 ? 0 : Math.min(100, target + 1);
 };
-export const setVolume = (v: number) => control(`set sound volume to ${volumeToSend(v)}`);
+export const setVolume = (v: number) => control(`set sound volume to ${volumeToSend(v)}\n    return "ok"`);
 export const open = () => osascript('tell application "Spotify" to activate').then(() => undefined);
