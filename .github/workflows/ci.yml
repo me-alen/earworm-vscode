@@ -1,0 +1,36 @@
+name: CI
+on: [push, pull_request]
+
+# A newer push to the same branch cancels the older run, to save minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        # 22.04 ships an older pactl; 24.04 is current.
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    env:
+      XDG_RUNTIME_DIR: ${{ github.workspace }}/.xdg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends dbus python3-dbus python3-gi pulseaudio pulseaudio-utils
+      - run: npm ci
+      - name: Start PulseAudio with a null sink
+        run: |
+          mkdir -m 700 -p "$XDG_RUNTIME_DIR"
+          pulseaudio --start --exit-idle-time=-1
+          pactl load-module module-null-sink sink_name=ci
+      # Unit tests for both backends, plus the Linux integration test on a private session bus.
+      - run: dbus-run-session -- npm test
+        env:
+          BACKBEAT_LINUX_IT: '1'
