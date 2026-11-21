@@ -18,8 +18,8 @@ Priority: **P0** = MVP (first release) · **P1** = v1.x · **P2** = later or nic
 ### Web API mode (opt-in, user's own Client ID)
 | ID | Requirement | Priority |
 |---|---|---|
-| F8 | Setup walkthrough: open the Spotify dashboard, show the redirect URI to copy, accept the Client ID, test the sign-in | P0 |
-| F9 | PKCE sign-in through a loopback `127.0.0.1` listener; sign-out clears all tokens | P0 |
+| F8 | ✅ Setup walkthrough: open the Spotify dashboard, show the redirect URI to copy, accept the Client ID, test the sign-in | P0 |
+| F9 | ✅ PKCE sign-in through a loopback `127.0.0.1` listener; sign-out clears all tokens | P0 |
 | F10 | Search tracks, albums and playlists in a QuickPick; play or add to queue | P1 |
 | F11 | Sidebar tree: playlists, liked songs, albums, recently played, queue | P1 |
 | F12 | Like/unlike the current track | P1 |
@@ -55,6 +55,6 @@ Priority: **P0** = MVP (first release) · **P1** = v1.x · **P2** = later or nic
 - Spotify Free users controlling playback through the Web API (Spotify requires Premium)
 
 ## Open questions
-1. The final product name.
+1. The final product name. Free on both the VS Code Marketplace and Open VSX (checked 2026-11-21): Backbeat, Downbeat, Earworm, Playbar.
 2. ~~Which OS to build first?~~ Decided: macOS, then Linux, then Windows. All three are built.
 3. Is LRCLIB acceptable for lyrics, or do we leave lyrics out?

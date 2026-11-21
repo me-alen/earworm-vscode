@@ -3,8 +3,8 @@
 A VS Code extension for controlling Spotify while you code. It is meant to replace
 `shyykoserhiy.vscode-spotify`, which has had no commits since January 2023 and has 89 open issues.
 
-Status: **MVP, macOS, Linux and Windows.** Controls the Spotify desktop app directly, with no
-sign-in, so it works with Spotify Free.
+Status: **MVP, macOS, Linux and Windows, plus an optional Web API mode.** By default it
+controls the Spotify desktop app directly, with no sign-in, so it works with Spotify Free.
 
 | | macOS | Linux | Windows 10 / 11 |
 |---|---|---|---|
@@ -17,12 +17,30 @@ sign-in, so it works with Spotify Free.
 ## What works
 - Status bar: previous / play-pause / next buttons and the current track (click it to open Spotify)
 - Commands (search "Backbeat" in the command palette, bind any of them to keys): Play/Pause,
-  Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify
-- Settings: `backbeat.refreshInterval` (seconds, default 2), `backbeat.showButtons`, `backbeat.volumeStep`
+  Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify,
+  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify
+- Settings: `backbeat.mode` (`local` or `webApi`), `backbeat.clientId`, `backbeat.refreshInterval`
+  (seconds, default 2; at least 5 in Web API mode), `backbeat.showButtons`, `backbeat.volumeStep`
 - Polling stops while the VS Code window is not focused
 
 The first time it runs, macOS asks whether VS Code may control Spotify. Allow it, or later
 under System Settings → Privacy & Security → Automation.
+
+## Web API mode (optional)
+Controls Spotify on any of your devices (phone, speaker, web player, another computer) through
+the Spotify Web API, and also works on operating systems without local control. It needs
+**Spotify Premium** and your **own Spotify developer app**: since 2026 Spotify allows only 5 users
+per app, so Backbeat cannot ship a shared one.
+
+Run **Backbeat: Set Up Spotify Web API** and follow the steps:
+1. In the [Spotify dashboard](https://developer.spotify.com/dashboard), create an app and tick "Web API".
+2. Add the redirect URI `http://127.0.0.1/callback` (Backbeat copies it for you). No port is
+   needed: Spotify accepts any port for loopback addresses, and Backbeat picks a free one.
+3. Paste the app's Client ID into Backbeat, then approve the sign-in in your browser.
+
+Sign-in uses PKCE, so there is no client secret and no server of ours in between. Tokens are kept
+only in VS Code's secret storage. **Sign Out of Spotify** deletes them and returns to local mode.
+If your app's quota runs out, Backbeat says so and waits before trying again.
 
 ## Develop
 ```bash

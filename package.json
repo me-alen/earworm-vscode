@@ -2,6 +2,7 @@
   "name": "backbeat",
   "displayName": "Backbeat",
   "description": "Control the Spotify desktop app from VS Code on macOS, Linux and Windows. No sign-in needed.",
+  "icon": "images/icon.png",
   "version": "0.1.0",
   "publisher": "me-alen",
   "author": {
@@ -78,16 +79,49 @@
         "command": "backbeat.openSpotify",
         "title": "Open Spotify",
         "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.setUpWebApi",
+        "title": "Set Up Spotify Web API",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.signIn",
+        "title": "Sign In to Spotify",
+        "category": "Backbeat"
+      },
+      {
+        "command": "backbeat.signOut",
+        "title": "Sign Out of Spotify",
+        "category": "Backbeat"
       }
     ],
     "configuration": {
       "title": "Backbeat",
       "properties": {
+        "backbeat.mode": {
+          "type": "string",
+          "enum": [
+            "local",
+            "webApi"
+          ],
+          "enumDescriptions": [
+            "Control the Spotify app on this computer through the OS. No sign-in; works with Spotify Free.",
+            "Control Spotify on any of your devices through the Spotify Web API. Needs your own Client ID and Spotify Premium. Set it up with \"Backbeat: Set Up Spotify Web API\"."
+          ],
+          "default": "local",
+          "description": "How Backbeat talks to Spotify."
+        },
+        "backbeat.clientId": {
+          "type": "string",
+          "default": "",
+          "description": "Client ID of your own Spotify developer app, used in Web API mode. Not a secret. Set it with \"Backbeat: Set Up Spotify Web API\"."
+        },
         "backbeat.refreshInterval": {
           "type": "number",
           "default": 2,
           "minimum": 1,
-          "description": "Seconds between now-playing updates. Updates pause while the window is not focused."
+          "description": "Seconds between now-playing updates. Updates pause while the window is not focused. In Web API mode the minimum is 5 seconds, since every update counts against your Spotify quota."
         },
         "backbeat.showButtons": {
           "type": "boolean",
