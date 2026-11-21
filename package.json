@@ -42,6 +42,12 @@
         "icon": "$(search)"
       },
       {
+        "command": "earworm.pickDevice",
+        "title": "Choose Spotify Device",
+        "category": "Earworm",
+        "icon": "$(broadcast)"
+      },
+      {
         "command": "earworm.playPause",
         "title": "Play/Pause",
         "category": "Earworm"

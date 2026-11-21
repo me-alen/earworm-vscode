@@ -23,7 +23,7 @@ Priority: **P0** = MVP (first release) · **P1** = v1.x · **P2** = later or nic
 | F10 | ✅ Search tracks, albums and playlists in a QuickPick; play or add to queue (songs only: Spotify's queue takes single songs) | P1 |
 | F11 | Sidebar tree: playlists, liked songs, albums, recently played, queue | P1 |
 | F12 | Like/unlike the current track | P1 |
-| F13 | Device picker that moves playback to another Spotify Connect device | P1 |
+| F13 | ✅ Device picker that moves playback to another Spotify Connect device | P1 |
 | F14 | Fall back to local mode for playback when the Web API cannot be used (no Premium, quota exceeded, offline) | P1 |
 
 ### Extras

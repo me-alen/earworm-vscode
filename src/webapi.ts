@@ -48,6 +48,21 @@ export function parsePlayback(p: any): PlayerState {
   };
 }
 
+export interface Device {
+  id: string;
+  name: string;
+  type: string;        // Computer, Smartphone, Speaker, TV, ...
+  active: boolean;
+  restricted: boolean; // Spotify accepts no commands for it
+}
+
+/** Turns GET /me/player/devices into a list. Devices without an id cannot be addressed, so they are left out. */
+export function parseDevices(r: any): Device[] {
+  return ((r?.devices ?? []) as any[]).filter(x => x?.id).map(x => ({
+    id: x.id, name: x.name, type: x.type ?? '', active: !!x.is_active, restricted: !!x.is_restricted,
+  }));
+}
+
 export interface SearchItem {
   kind: 'track' | 'album' | 'playlist';
   uri: string;
@@ -89,6 +104,8 @@ export interface WebApi extends Player {
   search(query: string): Promise<SearchItem[]>;
   play(item: SearchItem): Promise<unknown>;
   addToQueue(item: SearchItem): Promise<void>;
+  devices(): Promise<Device[]>;
+  transfer(deviceId: string): Promise<void>;
 }
 
 export function createWebApi(d: Deps): WebApi {
@@ -199,7 +216,7 @@ export function createWebApi(d: Deps): WebApi {
       return await api(method, path, body);
     } catch (err) {
       if (!(err instanceof NotRunningError)) throw err;
-      const devices = ((await api('GET', '/me/player/devices'))?.devices ?? []).filter((x: any) => !x.is_restricted);
+      const devices = parseDevices(await api('GET', '/me/player/devices')).filter(x => !x.restricted);
       if (devices.length !== 1) {
         throw new NotRunningError(devices.length
           ? 'Several Spotify devices are available but none is playing. Start playing on the one you want, then try again.'
@@ -279,6 +296,9 @@ export function createWebApi(d: Deps): WebApi {
     play: (item: SearchItem) => onDevice('PUT', '/me/player/play', item.kind !== 'track'
       ? { context_uri: item.uri }
       : item.contextUri ? { context_uri: item.contextUri, offset: { uri: item.uri } } : { uris: [item.uri] }),
+    devices: async () => parseDevices(await api('GET', '/me/player/devices')),
+    // Without "play", Spotify keeps the current state: playing stays playing, paused stays paused.
+    transfer: async (deviceId: string) => { await api('PUT', '/me/player', { device_ids: [deviceId] }); },
     async addToQueue(item: SearchItem) {
       if (item.kind !== 'track') throw new Error('Only songs can be added to the queue.');
       await onDevice('POST', `/me/player/queue?uri=${encodeURIComponent(item.uri)}`);

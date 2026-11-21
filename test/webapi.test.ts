@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { challengeFor, createWebApi, parsePlayback, parseSearch, SignInRequiredError } from '../src/webapi';
+import { challengeFor, createWebApi, parseDevices, parsePlayback, parseSearch, SignInRequiredError } from '../src/webapi';
 import { NotRunningError } from '../src/common';
 
 const json = (status: number, body?: unknown, headers: Record<string, string> = {}) =>
@@ -246,4 +246,27 @@ test('with no active device, play and queue use the only available one', async (
   s.devices = [];
   s.next = noDevice();
   await assert.rejects(api.play(song), NotRunningError);
+});
+
+test('parseDevices skips devices without an id', () => {
+  assert.deepEqual(parseDevices({ devices: [
+    { id: 'mac', name: 'MacBook', type: 'Computer', is_active: true, is_restricted: false, volume_percent: 50 },
+    { id: null, name: 'Ghost', type: 'Speaker' },
+    { id: 'tv', name: 'Living Room', type: 'TV', is_active: false, is_restricted: true },
+  ] }), [
+    { id: 'mac', name: 'MacBook', type: 'Computer', active: true, restricted: false },
+    { id: 'tv', name: 'Living Room', type: 'TV', active: false, restricted: true },
+  ]);
+  assert.deepEqual(parseDevices(undefined), []);
+});
+
+test('devices and transfer call the right endpoints', async () => {
+  const { s, api } = await signedIn();
+  s.devices = [{ id: 'phone' }];
+  assert.deepEqual((await api.devices()).map(d => d.id), ['phone']);
+  await api.transfer('phone');
+  assert.deepEqual(s.calls, [
+    'GET /me/player/devices Bearer access-1',
+    'PUT /me/player Bearer access-1 {"device_ids":["phone"]}',
+  ]);
 });

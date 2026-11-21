@@ -18,7 +18,7 @@ controls the Spotify desktop app directly, with no sign-in, so it works with Spo
 - Status bar: previous / play-pause / next buttons and the current track (click it to open Spotify)
 - Commands (search "Earworm" in the command palette, bind any of them to keys): Play/Pause,
   Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify,
-  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify
+  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify, Choose Spotify Device
 - Settings: `earworm.mode` (`local` or `webApi`), `earworm.clientId`, `earworm.refreshInterval`
   (seconds, default 2; at least 5 in Web API mode), `earworm.showButtons`, `earworm.volumeStep`
 - Polling stops while the VS Code window is not focused
@@ -47,6 +47,10 @@ Enter plays the result: a song plays within its album, so playback carries on af
 **+** button next to a song adds it to the queue and keeps the search open for more. Spotify
 returns at most 10 results of each kind to apps like this one. If no device is playing but only
 one is available (say, the desktop app sitting idle), Earworm plays on that one.
+
+**Earworm: Choose Spotify Device** (Web API mode) lists your Spotify Connect devices (computers,
+phones, speakers, TVs) and moves playback to the one you pick. Playing stays playing and paused
+stays paused. Devices that Spotify does not let other apps control are shown but cannot be picked.
 
 ## Develop
 ```bash

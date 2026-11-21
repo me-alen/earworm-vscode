@@ -5,6 +5,7 @@ import * as linux from './linux';
 import * as windows from './windows';
 import { createWebApi, REDIRECT_URI, SignInRequiredError } from './webapi';
 import { showSearch } from './search';
+import { pickDevice } from './devices';
 
 const config = () => vscode.workspace.getConfiguration('earworm');
 const locals: Partial<Record<NodeJS.Platform, Player>> = { darwin: macos, linux, win32: windows };
@@ -109,6 +110,10 @@ export function activate(context: vscode.ExtensionContext) {
     }
   }
 
+  async function requireSignIn(feature: string) {
+    if (!(await web.signedIn())) throw new SignInRequiredError(`${feature} uses the Spotify Web API. Sign in to Spotify first.`);
+  }
+
   async function signIn() {
     if (!config().get<string>('clientId', '').trim()) return setUpWebApi();
     await vscode.window.withProgress(
@@ -192,8 +197,12 @@ export function activate(context: vscode.ExtensionContext) {
     command('signIn', signIn),
     command('signOut', signOut),
     command('search', async () => {
-      if (!(await web.signedIn())) throw new SignInRequiredError('Search uses the Spotify Web API. Sign in to Spotify first.');
+      await requireSignIn('Search');
       showSearch(web, showError, () => void refresh());
+    }),
+    command('pickDevice', async () => {
+      await requireSignIn('Choosing a device');
+      await pickDevice(web);
     }),
     vscode.window.onDidChangeWindowState(s => { if (s.focused) void refresh(); }),
     vscode.workspace.onDidChangeConfiguration(e => {
