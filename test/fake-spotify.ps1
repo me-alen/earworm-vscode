@@ -29,7 +29,6 @@ function global:Show-Track {
   $u.MusicProperties.AlbumTitle = $t[2]
   $u.Update()
 }
-Show-Track
 
 # Register-ObjectEvent cannot subscribe to WinRT events, and a script block handler would run
 # on a thread with no PowerShell runspace. So a C# shim queues presses and the loop applies them.
@@ -53,6 +52,7 @@ public static class FakeButtons {
 }
 '@
 [FakeButtons]::Attach($smtc, [Windows.Media.SystemMediaTransportControls, Windows.Media, ContentType = WindowsRuntime])
+Show-Track # only now: the test starts pressing buttons as soon as the track appears
 
 Write-Host 'Fake Spotify is up.'
 $button = $null
