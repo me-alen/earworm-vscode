@@ -48,10 +48,50 @@ export function parsePlayback(p: any): PlayerState {
   };
 }
 
+export interface SearchItem {
+  kind: 'track' | 'album' | 'playlist';
+  uri: string;
+  name: string;
+  by: string;           // artists, or the playlist's owner
+  detail?: string;
+  contextUri?: string;  // a song's album, so playback continues after it
+}
+
+const names = (list?: { name: string }[]) => (list ?? []).map(x => x.name).join(', ');
+const duration = (ms?: number) => (ms ? `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}` : '');
+
+/** Turns GET /search into a flat list: songs, then albums, then playlists. Spotify can return null entries. */
+export function parseSearch(r: any): SearchItem[] {
+  const list = (x: any) => ((x?.items ?? []) as any[]).filter(Boolean);
+  return [
+    ...list(r?.tracks).map((t): SearchItem => ({
+      kind: 'track', uri: t.uri, name: t.name, by: names(t.artists),
+      detail: [t.album?.name, duration(t.duration_ms)].filter(Boolean).join(' · '),
+      contextUri: t.album?.uri,
+    })),
+    ...list(r?.albums).map((a): SearchItem => ({
+      kind: 'album', uri: a.uri, name: a.name, by: names(a.artists),
+      detail: [a.release_date?.slice(0, 4), a.total_tracks && `${a.total_tracks} songs`].filter(Boolean).join(' · '),
+    })),
+    ...list(r?.playlists).map((p): SearchItem => ({
+      kind: 'playlist', uri: p.uri, name: p.name, by: p.owner?.display_name ? `by ${p.owner.display_name}` : '',
+    })),
+  ];
+}
+
 const page = (text: string) =>
   `<!doctype html><meta charset="utf-8"><title>Earworm</title><body style="font:16px system-ui;padding:3em">${text}</body>`;
 
-export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): Promise<void>; signOut(): Promise<void> } {
+export interface WebApi extends Player {
+  signIn(signal?: AbortSignal): Promise<void>;
+  signOut(): Promise<void>;
+  signedIn(): Promise<boolean>;
+  search(query: string): Promise<SearchItem[]>;
+  play(item: SearchItem): Promise<unknown>;
+  addToQueue(item: SearchItem): Promise<void>;
+}
+
+export function createWebApi(d: Deps): WebApi {
   const f = d.fetch ?? fetch;
   const now = d.now ?? Date.now;
   let refreshing: Promise<Tokens> | undefined;
@@ -113,16 +153,19 @@ export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): 
       : `Spotify asked Earworm to slow down. Trying again in ${seconds} s.`;
   }
 
-  async function api(method: string, path: string, retried = false): Promise<any> {
+  async function api(method: string, path: string, body?: unknown, retried = false): Promise<any> {
     if (now() < blockedUntil) throw new Error(blockedMessage());
+    const headers: Record<string, string> = { Authorization: `Bearer ${await accessToken()}` };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
     const res = await f(API + path, {
       method,
-      headers: { Authorization: `Bearer ${await accessToken()}` },
-      body: method === 'GET' ? undefined : '', // Spotify wants a Content-Length on PUT/POST
+      headers,
+      // Spotify wants a Content-Length on PUT/POST, so send an empty body rather than none.
+      body: method === 'GET' ? undefined : body === undefined ? '' : JSON.stringify(body),
     });
     if (res.status === 401 && !retried) {
       await refresh();
-      return api(method, path, true);
+      return api(method, path, body, true);
     }
     const text = await res.text();
     let json: any;
@@ -147,6 +190,23 @@ export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): 
       throw new Error('Spotify refused this account. In the Spotify dashboard, add your Spotify email under your app\'s User Management.');
     }
     throw new Error(`Spotify Web API: ${message}`);
+  }
+
+  // Spotify's desktop app often sits idle with no "active" device. When it is the only device,
+  // send the command to it by id instead of failing.
+  async function onDevice(method: string, path: string, body?: unknown) {
+    try {
+      return await api(method, path, body);
+    } catch (err) {
+      if (!(err instanceof NotRunningError)) throw err;
+      const devices = ((await api('GET', '/me/player/devices'))?.devices ?? []).filter((x: any) => !x.is_restricted);
+      if (devices.length !== 1) {
+        throw new NotRunningError(devices.length
+          ? 'Several Spotify devices are available but none is playing. Start playing on the one you want, then try again.'
+          : NO_DEVICE);
+      }
+      return api(method, `${path}${path.includes('?') ? '&' : '?'}device_id=${encodeURIComponent(devices[0].id)}`, body);
+    }
   }
 
   const playback = () => api('GET', '/me/player?additional_types=episode');
@@ -210,6 +270,19 @@ export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): 
       }
     },
     signOut: async () => { await d.store.delete(); },
+    signedIn: async () => !!(await d.store.get()),
+
+    // Development-mode apps get at most 10 results per type since February 2026.
+    search: async (query: string) => parseSearch(await api('GET',
+      `/search?${new URLSearchParams({ q: query, type: 'track,album,playlist', limit: '10' }).toString().replace(/\+/g, '%20')}`)),
+    // A song plays within its album, so playback carries on after it like in the Spotify app.
+    play: (item: SearchItem) => onDevice('PUT', '/me/player/play', item.kind !== 'track'
+      ? { context_uri: item.uri }
+      : item.contextUri ? { context_uri: item.contextUri, offset: { uri: item.uri } } : { uris: [item.uri] }),
+    async addToQueue(item: SearchItem) {
+      if (item.kind !== 'track') throw new Error('Only songs can be added to the queue.');
+      await onDevice('POST', `/me/player/queue?uri=${encodeURIComponent(item.uri)}`);
+    },
 
     getState: async () => parsePlayback(await playback()),
     playPause: async () => api('PUT', (await active()).is_playing ? '/me/player/pause' : '/me/player/play'),

@@ -4,6 +4,7 @@ import * as macos from './macos';
 import * as linux from './linux';
 import * as windows from './windows';
 import { createWebApi, REDIRECT_URI, SignInRequiredError } from './webapi';
+import { showSearch } from './search';
 
 const config = () => vscode.workspace.getConfiguration('earworm');
 const locals: Partial<Record<NodeJS.Platform, Player>> = { darwin: macos, linux, win32: windows };
@@ -190,6 +191,10 @@ export function activate(context: vscode.ExtensionContext) {
     command('setUpWebApi', setUpWebApi),
     command('signIn', signIn),
     command('signOut', signOut),
+    command('search', async () => {
+      if (!(await web.signedIn())) throw new SignInRequiredError('Search uses the Spotify Web API. Sign in to Spotify first.');
+      showSearch(web, showError, () => void refresh());
+    }),
     vscode.window.onDidChangeWindowState(s => { if (s.focused) void refresh(); }),
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('earworm')) { schedule(); void refresh(); }

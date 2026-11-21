@@ -20,7 +20,7 @@ Priority: **P0** = MVP (first release) · **P1** = v1.x · **P2** = later or nic
 |---|---|---|
 | F8 | ✅ Setup walkthrough: open the Spotify dashboard, show the redirect URI to copy, accept the Client ID, test the sign-in | P0 |
 | F9 | ✅ PKCE sign-in through a loopback `127.0.0.1` listener; sign-out clears all tokens | P0 |
-| F10 | Search tracks, albums and playlists in a QuickPick; play or add to queue | P1 |
+| F10 | ✅ Search tracks, albums and playlists in a QuickPick; play or add to queue (songs only: Spotify's queue takes single songs) | P1 |
 | F11 | Sidebar tree: playlists, liked songs, albums, recently played, queue | P1 |
 | F12 | Like/unlike the current track | P1 |
 | F13 | Device picker that moves playback to another Spotify Connect device | P1 |

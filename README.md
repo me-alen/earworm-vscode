@@ -18,7 +18,7 @@ controls the Spotify desktop app directly, with no sign-in, so it works with Spo
 - Status bar: previous / play-pause / next buttons and the current track (click it to open Spotify)
 - Commands (search "Earworm" in the command palette, bind any of them to keys): Play/Pause,
   Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify,
-  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify
+  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify
 - Settings: `earworm.mode` (`local` or `webApi`), `earworm.clientId`, `earworm.refreshInterval`
   (seconds, default 2; at least 5 in Web API mode), `earworm.showButtons`, `earworm.volumeStep`
 - Polling stops while the VS Code window is not focused
@@ -41,6 +41,12 @@ Run **Earworm: Set Up Spotify Web API** and follow the steps:
 Sign-in uses PKCE, so there is no client secret and no server of ours in between. Tokens are kept
 only in VS Code's secret storage. **Sign Out of Spotify** deletes them and returns to local mode.
 If your app's quota runs out, Earworm says so and waits before trying again.
+
+**Earworm: Search Spotify** (Web API mode) searches songs, albums and playlists as you type.
+Enter plays the result: a song plays within its album, so playback carries on after it. The
+**+** button next to a song adds it to the queue and keeps the search open for more. Spotify
+returns at most 10 results of each kind to apps like this one. If no device is playing but only
+one is available (say, the desktop app sitting idle), Earworm plays on that one.
 
 ## Develop
 ```bash

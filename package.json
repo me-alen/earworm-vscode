@@ -36,6 +36,12 @@
   "contributes": {
     "commands": [
       {
+        "command": "earworm.search",
+        "title": "Search Spotify",
+        "category": "Earworm",
+        "icon": "$(search)"
+      },
+      {
         "command": "earworm.playPause",
         "title": "Play/Pause",
         "category": "Earworm"

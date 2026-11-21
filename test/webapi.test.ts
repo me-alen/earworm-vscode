@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { challengeFor, createWebApi, parsePlayback, SignInRequiredError } from '../src/webapi';
+import { challengeFor, createWebApi, parsePlayback, parseSearch, SignInRequiredError } from '../src/webapi';
 import { NotRunningError } from '../src/common';
 
 const json = (status: number, body?: unknown, headers: Record<string, string> = {}) =>
@@ -14,6 +14,16 @@ const PLAYING = {
   item: { name: 'Say "Hi"', artists: [{ name: 'Artist A' }, { name: 'Artist B' }], album: { name: 'Album One' } },
 };
 
+// Shaped like a real GET /search reply, trimmed. Spotify does return null playlist entries.
+const SEARCH = {
+  tracks: { items: [{
+    uri: 'spotify:track:t1', name: 'Say "Hi"', duration_ms: 225_000,
+    artists: [{ name: 'Artist A' }, { name: 'Artist B' }], album: { uri: 'spotify:album:a1', name: 'Album One' },
+  }] },
+  albums: { items: [{ uri: 'spotify:album:a1', name: 'Album One', artists: [{ name: 'Artist A' }], release_date: '2021-05-07', total_tracks: 12 }] },
+  playlists: { items: [null, { uri: 'spotify:playlist:p1', name: 'Focus', owner: { display_name: 'Alen' } }] },
+};
+
 /** A fake Spotify (accounts + Web API) and a fake browser that completes the sign-in. */
 function fake(browser?: (redirect: string, state: string) => string) {
   const s = {
@@ -24,6 +34,7 @@ function fake(browser?: (redirect: string, state: string) => string) {
     issued: 0,
     revoked: false,
     player: PLAYING as any,
+    devices: [] as { id: string; is_restricted?: boolean }[],
     next: undefined as Response | undefined, // one-off reply for the next API call
   };
   const fetchFake = (async (input: string | URL | Request, init?: RequestInit) => {
@@ -41,10 +52,12 @@ function fake(browser?: (redirect: string, state: string) => string) {
       return json(200, { access_token: `access-${s.issued}`, expires_in: 3600, ...(grant === 'authorization_code' && { refresh_token: 'refresh-1' }) });
     }
     const auth = (init?.headers as Record<string, string>).Authorization;
-    s.calls.push(`${init?.method} ${url.pathname.replace('/v1', '')}${url.search} ${auth}`);
+    s.calls.push(`${init?.method} ${url.pathname.replace('/v1', '')}${url.search} ${auth}${init?.body ? ` ${init.body}` : ''}`);
     const once = s.next;
     s.next = undefined;
     if (once) return once;
+    if (url.pathname === '/v1/me/player/devices') return json(200, { devices: s.devices });
+    if (url.pathname === '/v1/search') return json(200, SEARCH);
     if (init?.method === 'GET') return s.player ? json(200, s.player) : json(204);
     return json(204);
   }) as typeof fetch;
@@ -191,4 +204,46 @@ test('sign-in can be cancelled', async () => {
   const abort = new AbortController();
   const { api } = fake(() => { abort.abort(); return 'unrelated=1'; });
   await assert.rejects(api.signIn(abort.signal), /cancelled/);
+});
+
+test('parseSearch keeps songs, albums and playlists, and skips null entries', () => {
+  assert.deepEqual(parseSearch(SEARCH), [
+    { kind: 'track', uri: 'spotify:track:t1', name: 'Say "Hi"', by: 'Artist A, Artist B', detail: 'Album One · 3:45', contextUri: 'spotify:album:a1' },
+    { kind: 'album', uri: 'spotify:album:a1', name: 'Album One', by: 'Artist A', detail: '2021 · 12 songs' },
+    { kind: 'playlist', uri: 'spotify:playlist:p1', name: 'Focus', by: 'by Alen' },
+  ]);
+  assert.deepEqual(parseSearch({}), []);
+});
+
+test('search, play and add to queue call the right endpoints', async () => {
+  const { s, api } = await signedIn();
+  const [song, album, playlist] = await api.search('say hi + more');
+  await api.play(song);
+  await api.play(album);
+  await api.play(playlist);
+  await api.addToQueue(song);
+  await assert.rejects(api.addToQueue(album), /Only songs/);
+  assert.deepEqual(s.calls, [
+    'GET /search?q=say%20hi%20%2B%20more&type=track%2Calbum%2Cplaylist&limit=10 Bearer access-1',
+    'PUT /me/player/play Bearer access-1 {"context_uri":"spotify:album:a1","offset":{"uri":"spotify:track:t1"}}',
+    'PUT /me/player/play Bearer access-1 {"context_uri":"spotify:album:a1"}',
+    'PUT /me/player/play Bearer access-1 {"context_uri":"spotify:playlist:p1"}',
+    'POST /me/player/queue?uri=spotify%3Atrack%3At1 Bearer access-1',
+  ]);
+});
+
+test('with no active device, play and queue use the only available one', async () => {
+  const { s, api } = await signedIn();
+  const [song] = await api.search('hi');
+  const noDevice = () => json(404, { error: { status: 404, message: 'No active device found', reason: 'NO_ACTIVE_DEVICE' } });
+  s.devices = [{ id: 'mac 1' }, { id: 'tv', is_restricted: true }];
+  s.next = noDevice();
+  await api.addToQueue(song);
+  assert.equal(s.calls.at(-1), 'POST /me/player/queue?uri=spotify%3Atrack%3At1&device_id=mac%201 Bearer access-1');
+  s.devices.push({ id: 'phone' });
+  s.next = noDevice();
+  await assert.rejects(api.play(song), /Several Spotify devices/);
+  s.devices = [];
+  s.next = noDevice();
+  await assert.rejects(api.play(song), NotRunningError);
 });
