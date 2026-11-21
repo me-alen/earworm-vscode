@@ -39,13 +39,16 @@ using System.Collections.Concurrent;
 public static class FakeButtons {
   public static readonly ConcurrentQueue<string> Pressed = new ConcurrentQueue<string>();
   static Type argsType;
+  static Delegate handler; // kept alive while subscribed
   public static void OnPressed(object sender, object args) {
     Pressed.Enqueue(argsType.GetProperty("Button").GetValue(args, null).ToString());
   }
   public static void Attach(object smtc, Type smtcType) {
     var ev = smtcType.GetEvent("ButtonPressed");
     argsType = ev.EventHandlerType.GetGenericArguments()[1];
-    ev.AddEventHandler(smtc, Delegate.CreateDelegate(ev.EventHandlerType, typeof(FakeButtons).GetMethod("OnPressed")));
+    handler = Delegate.CreateDelegate(ev.EventHandlerType, typeof(FakeButtons).GetMethod("OnPressed"));
+    // EventInfo.AddEventHandler refuses WinRT events (their add method returns a token); call it directly.
+    ev.GetAddMethod().Invoke(smtc, new object[] { handler });
   }
 }
 '@
