@@ -12,7 +12,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/me-alen/backbeat-vscode.git"
+    "url": "https://github.com/me-alen/earworm-vscode.git"
   },
   "engines": {
     "vscode": "^1.90.0"
