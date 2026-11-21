@@ -31,12 +31,35 @@ function global:Show-Track {
 }
 Show-Track
 
-$null = Register-ObjectEvent -InputObject $smtc -EventName ButtonPressed -Action {
-  switch ([string]$EventArgs.Button) {
-    'Play' { $global:smtc.PlaybackStatus = 'Playing' }
-    'Pause' { $global:smtc.PlaybackStatus = 'Paused' }
-    { $_ -in 'Next', 'Previous' } { $global:index = 1 - $global:index; Show-Track }
+# Register-ObjectEvent cannot subscribe to WinRT events, and a script block handler would run
+# on a thread with no PowerShell runspace. So a C# shim queues presses and the loop applies them.
+Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Concurrent;
+public static class FakeButtons {
+  public static readonly ConcurrentQueue<string> Pressed = new ConcurrentQueue<string>();
+  static Type argsType;
+  public static void OnPressed(object sender, object args) {
+    Pressed.Enqueue(argsType.GetProperty("Button").GetValue(args, null).ToString());
+  }
+  public static void Attach(object smtc, Type smtcType) {
+    var ev = smtcType.GetEvent("ButtonPressed");
+    argsType = ev.EventHandlerType.GetGenericArguments()[1];
+    ev.AddEventHandler(smtc, Delegate.CreateDelegate(ev.EventHandlerType, typeof(FakeButtons).GetMethod("OnPressed")));
   }
 }
+'@
+[FakeButtons]::Attach($smtc, [Windows.Media.SystemMediaTransportControls, Windows.Media, ContentType = WindowsRuntime])
+
 Write-Host 'Fake Spotify is up.'
-while ($true) { $null = Wait-Event -Timeout 1 }
+$button = $null
+while ($true) {
+  while ([FakeButtons]::Pressed.TryDequeue([ref]$button)) {
+    switch ($button) {
+      'Play' { $smtc.PlaybackStatus = 'Playing' }
+      'Pause' { $smtc.PlaybackStatus = 'Paused' }
+      { $_ -in 'Next', 'Previous' } { $global:index = 1 - $global:index; Show-Track }
+    }
+  }
+  Start-Sleep -Milliseconds 50
+}
