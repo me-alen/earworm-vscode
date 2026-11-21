@@ -2,16 +2,21 @@ import * as vscode from 'vscode';
 import { NotRunningError, PlayerState } from './common';
 import * as macos from './macos';
 import * as linux from './linux';
+import * as windows from './windows';
 
 const config = () => vscode.workspace.getConfiguration('backbeat');
-const backends: Partial<Record<NodeJS.Platform, typeof macos | typeof linux>> = { darwin: macos, linux };
+const backends: Partial<Record<NodeJS.Platform, typeof macos | typeof linux | typeof windows>> = {
+  darwin: macos,
+  linux,
+  win32: windows,
+};
 
 export function activate(context: vscode.ExtensionContext) {
   const backend = backends[process.platform];
   if (!backend) {
     if (!context.globalState.get('warnedPlatform')) {
       void context.globalState.update('warnedPlatform', true);
-      void vscode.window.showInformationMessage('Backbeat supports macOS and Linux for now. Windows support is planned.');
+      void vscode.window.showInformationMessage('Backbeat supports macOS, Linux and Windows only.');
     }
     return;
   }
@@ -123,4 +128,6 @@ export function activate(context: vscode.ExtensionContext) {
   void refresh();
 }
 
-export function deactivate() {}
+export function deactivate() {
+  windows.dispose();
+}

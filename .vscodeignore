@@ -6,3 +6,5 @@ out/test/**
 tsconfig.json
 ANALYSIS.md
 REQUIREMENTS.md
+.github/**
+.gitignore

@@ -1,9 +1,12 @@
 {
   "name": "backbeat",
   "displayName": "Backbeat",
-  "description": "Control the Spotify desktop app from VS Code. No sign-in needed.",
+  "description": "Control the Spotify desktop app from VS Code on macOS, Linux and Windows. No sign-in needed.",
   "version": "0.1.0",
   "publisher": "me-alen",
+  "author": {
+    "name": "Alen Francis"
+  },
   "license": "UNLICENSED",
   "private": true,
   "repository": {
@@ -104,7 +107,7 @@
   "scripts": {
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
-    "test": "npm run compile && node --test 'out/test/**/*.test.js'",
+    "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
     "package": "npm run compile && npx --yes @vscode/vsce package --skip-license"
   },
   "devDependencies": {

@@ -34,3 +34,19 @@ jobs:
       - run: dbus-run-session -- npm test
         env:
           BACKBEAT_LINUX_IT: '1'
+
+  # Windows minutes are billed at 2x, so one current runner only.
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Unit tests, plus the Windows integration test against a fake Spotify media session.
+      - run: npm test
+        env:
+          BACKBEAT_WINDOWS_IT: '1'
