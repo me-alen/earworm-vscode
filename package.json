@@ -1,6 +1,6 @@
 {
-  "name": "backbeat",
-  "displayName": "Backbeat",
+  "name": "earworm",
+  "displayName": "Earworm",
   "description": "Control the Spotify desktop app from VS Code on macOS, Linux and Windows. No sign-in needed.",
   "icon": "images/icon.png",
   "version": "0.1.0",
@@ -36,70 +36,70 @@
   "contributes": {
     "commands": [
       {
-        "command": "backbeat.playPause",
+        "command": "earworm.playPause",
         "title": "Play/Pause",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.next",
+        "command": "earworm.next",
         "title": "Next Track",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.previous",
+        "command": "earworm.previous",
         "title": "Previous Track",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.volumeUp",
+        "command": "earworm.volumeUp",
         "title": "Volume Up",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.volumeDown",
+        "command": "earworm.volumeDown",
         "title": "Volume Down",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.toggleMute",
+        "command": "earworm.toggleMute",
         "title": "Mute/Unmute",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.toggleShuffle",
+        "command": "earworm.toggleShuffle",
         "title": "Toggle Shuffle",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.toggleRepeat",
+        "command": "earworm.toggleRepeat",
         "title": "Toggle Repeat",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.openSpotify",
+        "command": "earworm.openSpotify",
         "title": "Open Spotify",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.setUpWebApi",
+        "command": "earworm.setUpWebApi",
         "title": "Set Up Spotify Web API",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.signIn",
+        "command": "earworm.signIn",
         "title": "Sign In to Spotify",
-        "category": "Backbeat"
+        "category": "Earworm"
       },
       {
-        "command": "backbeat.signOut",
+        "command": "earworm.signOut",
         "title": "Sign Out of Spotify",
-        "category": "Backbeat"
+        "category": "Earworm"
       }
     ],
     "configuration": {
-      "title": "Backbeat",
+      "title": "Earworm",
       "properties": {
-        "backbeat.mode": {
+        "earworm.mode": {
           "type": "string",
           "enum": [
             "local",
@@ -107,28 +107,28 @@
           ],
           "enumDescriptions": [
             "Control the Spotify app on this computer through the OS. No sign-in; works with Spotify Free.",
-            "Control Spotify on any of your devices through the Spotify Web API. Needs your own Client ID and Spotify Premium. Set it up with \"Backbeat: Set Up Spotify Web API\"."
+            "Control Spotify on any of your devices through the Spotify Web API. Needs your own Client ID and Spotify Premium. Set it up with \"Earworm: Set Up Spotify Web API\"."
           ],
           "default": "local",
-          "description": "How Backbeat talks to Spotify."
+          "description": "How Earworm talks to Spotify."
         },
-        "backbeat.clientId": {
+        "earworm.clientId": {
           "type": "string",
           "default": "",
-          "description": "Client ID of your own Spotify developer app, used in Web API mode. Not a secret. Set it with \"Backbeat: Set Up Spotify Web API\"."
+          "description": "Client ID of your own Spotify developer app, used in Web API mode. Not a secret. Set it with \"Earworm: Set Up Spotify Web API\"."
         },
-        "backbeat.refreshInterval": {
+        "earworm.refreshInterval": {
           "type": "number",
           "default": 2,
           "minimum": 1,
           "description": "Seconds between now-playing updates. Updates pause while the window is not focused. In Web API mode the minimum is 5 seconds, since every update counts against your Spotify quota."
         },
-        "backbeat.showButtons": {
+        "earworm.showButtons": {
           "type": "boolean",
           "default": true,
           "description": "Show previous / play-pause / next buttons in the status bar."
         },
-        "backbeat.volumeStep": {
+        "earworm.volumeStep": {
           "type": "number",
           "default": 10,
           "minimum": 1,

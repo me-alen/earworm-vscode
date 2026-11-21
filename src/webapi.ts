@@ -28,7 +28,7 @@ export interface Deps {
 }
 
 export class SignInRequiredError extends Error {
-  constructor(message = 'Sign in to Spotify first: run "Backbeat: Sign In to Spotify".') { super(message); }
+  constructor(message = 'Sign in to Spotify first: run "Earworm: Sign In to Spotify".') { super(message); }
 }
 
 export const challengeFor = (verifier: string) => createHash('sha256').update(verifier).digest('base64url');
@@ -49,7 +49,7 @@ export function parsePlayback(p: any): PlayerState {
 }
 
 const page = (text: string) =>
-  `<!doctype html><meta charset="utf-8"><title>Backbeat</title><body style="font:16px system-ui;padding:3em">${text}</body>`;
+  `<!doctype html><meta charset="utf-8"><title>Earworm</title><body style="font:16px system-ui;padding:3em">${text}</body>`;
 
 export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): Promise<void>; signOut(): Promise<void> } {
   const f = d.fetch ?? fetch;
@@ -67,7 +67,7 @@ export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): 
     const json: any = await res.json().catch(() => ({}));
     if (!res.ok) {
       if (json.error === 'invalid_grant') throw new SignInRequiredError('Your Spotify sign-in has expired or was revoked. Sign in again.');
-      if (json.error === 'invalid_client') throw new SignInRequiredError('Spotify does not recognise this Client ID. Run "Backbeat: Set Up Spotify Web API" again.');
+      if (json.error === 'invalid_client') throw new SignInRequiredError('Spotify does not recognise this Client ID. Run "Earworm: Set Up Spotify Web API" again.');
       throw new Error(`Spotify sign-in failed: ${json.error_description ?? json.error ?? res.status}`);
     }
     return {
@@ -109,8 +109,8 @@ export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): 
   function blockedMessage() {
     const seconds = Math.ceil((blockedUntil - now()) / 1000);
     return quotaBlocked
-      ? `Your Spotify app has used up its Web API quota. Backbeat will try again in ${Math.ceil(seconds / 60)} min. Local mode still works meanwhile.`
-      : `Spotify asked Backbeat to slow down. Trying again in ${seconds} s.`;
+      ? `Your Spotify app has used up its Web API quota. Earworm will try again in ${Math.ceil(seconds / 60)} min. Local mode still works meanwhile.`
+      : `Spotify asked Earworm to slow down. Trying again in ${seconds} s.`;
   }
 
   async function api(method: string, path: string, retried = false): Promise<any> {
@@ -140,7 +140,7 @@ export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): 
     }
     if (res.status === 404 && reason === 'NO_ACTIVE_DEVICE') throw new NotRunningError(NO_DEVICE);
     if (reason === 'PREMIUM_REQUIRED') {
-      throw new Error('Controlling playback through the Web API needs Spotify Premium. Set "backbeat.mode" to "local" to control the desktop app instead.');
+      throw new Error('Controlling playback through the Web API needs Spotify Premium. Set "earworm.mode" to "local" to control the desktop app instead.');
     }
     if (reason === 'VOLUME_CONTROL_DISALLOW') throw new Error('This Spotify device does not let other apps change its volume.');
     if (res.status === 403 && /registered|user may not/i.test(message)) {
@@ -159,7 +159,7 @@ export function createWebApi(d: Deps): Player & { signIn(signal?: AbortSignal): 
   return {
     async signIn(signal?: AbortSignal) {
       const clientId = d.clientId();
-      if (!clientId) throw new Error('Set your Client ID first: run "Backbeat: Set Up Spotify Web API".');
+      if (!clientId) throw new Error('Set your Client ID first: run "Earworm: Set Up Spotify Web API".');
       const verifier = randomBytes(64).toString('base64url');
       const state = randomBytes(16).toString('base64url');
       const server = http.createServer();

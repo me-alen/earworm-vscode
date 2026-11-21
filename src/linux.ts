@@ -19,7 +19,7 @@ function run(cmd: string, args: string[]): Promise<string> {
     execFile(cmd, args, { timeout: 5000 }, (err, stdout, stderr) => {
       if (!err) return resolve(stdout);
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-        return reject(new Error(`Backbeat needs \`${cmd}\` on Linux. ${INSTALL_HINT[cmd] ?? ''}`));
+        return reject(new Error(`Earworm needs \`${cmd}\` on Linux. ${INSTALL_HINT[cmd] ?? ''}`));
       }
       reject(new Error(stderr.trim() || `${cmd} failed.`));
     });

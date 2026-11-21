@@ -1,4 +1,4 @@
-# Backbeat's Windows helper, started once by src/windows.ts and kept running.
+# Earworm's Windows helper, started once by src/windows.ts and kept running.
 # Reads one command per line on stdin and answers each with one JSON line on stdout.
 # Playback and track info go through Windows' media controls (SMTC); volume goes through
 # Spotify's entry in the Windows volume mixer (Core Audio), like the per-app slider.
@@ -48,7 +48,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Backbeat {
+namespace Earworm {
   [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
   interface IMMDeviceEnumerator {
     int EnumAudioEndpoints();
@@ -131,7 +131,7 @@ function Use-Audio {
 }
 $noStream = 'Spotify has no audio stream right now. Start playback, then try again.'
 
-function Invoke-Backbeat([string]$cmd, [string]$arg) {
+function Invoke-Earworm([string]$cmd, [string]$arg) {
   switch ($cmd) {
     'state' {
       $s = Get-SpotifySession
@@ -153,13 +153,13 @@ function Invoke-Backbeat([string]$cmd, [string]$arg) {
     }
     'getVolume' {
       Use-Audio
-      $v = [Backbeat.SpotifyVolume]::Get()
+      $v = [Earworm.SpotifyVolume]::Get()
       if ($v -lt 0) { throw $noStream }
       return $v
     }
     'setVolume' {
       Use-Audio
-      if (-not [Backbeat.SpotifyVolume]::Set([int]$arg)) { throw $noStream }
+      if (-not [Earworm.SpotifyVolume]::Set([int]$arg)) { throw $noStream }
     }
     default { throw "Unknown command: $cmd" }
   }
@@ -173,6 +173,6 @@ function Reply($reply) {
 # Ends when the extension closes stdin (VS Code quitting or the extension stopping).
 while ($null -ne ($line = [Console]::In.ReadLine())) {
   $cmd, $arg = $line -split ' ', 2
-  try { Reply @{ ok = $true; value = (Invoke-Backbeat $cmd $arg) } }
+  try { Reply @{ ok = $true; value = (Invoke-Earworm $cmd $arg) } }
   catch { Reply @{ ok = $false; error = $_.Exception.Message } }
 }

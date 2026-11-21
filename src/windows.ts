@@ -9,7 +9,7 @@ import { NotRunningError, PlayerState } from './common';
 const SCRIPT = path.join(__dirname, '../../scripts/windows-host.ps1');
 // Execution policy does not apply to a script block built from a string, so this runs even
 // where .ps1 files are blocked.
-const BOOT = '& ([scriptblock]::Create([IO.File]::ReadAllText($env:BACKBEAT_HOST)))';
+const BOOT = '& ([scriptblock]::Create([IO.File]::ReadAllText($env:EARWORM_HOST)))';
 const TIMEOUT_MS = 10_000; // the first request also waits for PowerShell to start
 
 interface Host { proc: ChildProcessWithoutNullStreams; stderr: string; waiting?: (reply: string | Error) => void }
@@ -18,7 +18,7 @@ let queue: Promise<unknown> = Promise.resolve();
 
 function start(): Host {
   const proc = spawn('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', BOOT], {
-    env: { ...process.env, BACKBEAT_HOST: SCRIPT },
+    env: { ...process.env, EARWORM_HOST: SCRIPT },
     windowsHide: true,
   });
   const h: Host = { proc, stderr: '' };
@@ -28,9 +28,9 @@ function start(): Host {
   proc.stderr.on('data', d => { h.stderr = (h.stderr + d).slice(-2000); });
   proc.stdin.on('error', () => undefined); // writes after exit; the exit handler reports it
   proc.on('error', err => fail((err as NodeJS.ErrnoException).code === 'ENOENT'
-    ? new Error('Backbeat needs Windows PowerShell (powershell.exe), which ships with Windows.')
+    ? new Error('Earworm needs Windows PowerShell (powershell.exe), which ships with Windows.')
     : err));
-  proc.on('exit', () => fail(new Error(h.stderr.trim() || 'The Backbeat helper stopped unexpectedly.')));
+  proc.on('exit', () => fail(new Error(h.stderr.trim() || 'The Earworm helper stopped unexpectedly.')));
   return h;
 }
 
@@ -39,7 +39,7 @@ export function parseReply(line: string): unknown {
   const reply = JSON.parse(line) as { ok: boolean; value?: unknown; error?: string };
   if (reply.ok) return reply.value;
   if (reply.error === 'NOT_RUNNING') throw new NotRunningError();
-  throw new Error(reply.error || 'The Backbeat helper failed.');
+  throw new Error(reply.error || 'The Earworm helper failed.');
 }
 
 function request(command: string): Promise<unknown> {

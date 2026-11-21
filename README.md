@@ -1,4 +1,4 @@
-# Backbeat (working name)
+# Earworm
 
 A VS Code extension for controlling Spotify while you code. It is meant to replace
 `shyykoserhiy.vscode-spotify`, which has had no commits since January 2023 and has 89 open issues.
@@ -11,16 +11,16 @@ controls the Spotify desktop app directly, with no sign-in, so it works with Spo
 | How | AppleScript (`osascript`) | MPRIS over D-Bus (`busctl`), volume through `pactl` | Windows media controls (SMTC), volume through the per-app volume mixer, both from one Windows PowerShell helper |
 | Play/pause, next, previous, now playing | ✅ | ✅ | ✅ once Spotify has played something since it opened |
 | Volume, mute | ✅ | ✅ while Spotify has an audio stream (start playback first) | ✅ while Spotify has an audio stream; changes Spotify's slider in the volume mixer |
-| Shuffle, repeat | ✅ | ⚠️ Spotify's Linux app has long ignored these from other apps; Backbeat tries, then tells you if it didn't take | ⚠️ Backbeat asks Windows; if Spotify refuses, it tells you |
+| Shuffle, repeat | ✅ | ⚠️ Spotify's Linux app has long ignored these from other apps; Earworm tries, then tells you if it didn't take | ⚠️ Earworm asks Windows; if Spotify refuses, it tells you |
 | Needs | nothing extra | `busctl` (systemd) and `pactl` (PulseAudio or PipeWire) | nothing extra (Windows PowerShell ships with Windows) |
 
 ## What works
 - Status bar: previous / play-pause / next buttons and the current track (click it to open Spotify)
-- Commands (search "Backbeat" in the command palette, bind any of them to keys): Play/Pause,
+- Commands (search "Earworm" in the command palette, bind any of them to keys): Play/Pause,
   Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify,
   Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify
-- Settings: `backbeat.mode` (`local` or `webApi`), `backbeat.clientId`, `backbeat.refreshInterval`
-  (seconds, default 2; at least 5 in Web API mode), `backbeat.showButtons`, `backbeat.volumeStep`
+- Settings: `earworm.mode` (`local` or `webApi`), `earworm.clientId`, `earworm.refreshInterval`
+  (seconds, default 2; at least 5 in Web API mode), `earworm.showButtons`, `earworm.volumeStep`
 - Polling stops while the VS Code window is not focused
 
 The first time it runs, macOS asks whether VS Code may control Spotify. Allow it, or later
@@ -30,23 +30,23 @@ under System Settings → Privacy & Security → Automation.
 Controls Spotify on any of your devices (phone, speaker, web player, another computer) through
 the Spotify Web API, and also works on operating systems without local control. It needs
 **Spotify Premium** and your **own Spotify developer app**: since 2026 Spotify allows only 5 users
-per app, so Backbeat cannot ship a shared one.
+per app, so Earworm cannot ship a shared one.
 
-Run **Backbeat: Set Up Spotify Web API** and follow the steps:
+Run **Earworm: Set Up Spotify Web API** and follow the steps:
 1. In the [Spotify dashboard](https://developer.spotify.com/dashboard), create an app and tick "Web API".
-2. Add the redirect URI `http://127.0.0.1/callback` (Backbeat copies it for you). No port is
-   needed: Spotify accepts any port for loopback addresses, and Backbeat picks a free one.
-3. Paste the app's Client ID into Backbeat, then approve the sign-in in your browser.
+2. Add the redirect URI `http://127.0.0.1/callback` (Earworm copies it for you). No port is
+   needed: Spotify accepts any port for loopback addresses, and Earworm picks a free one.
+3. Paste the app's Client ID into Earworm, then approve the sign-in in your browser.
 
 Sign-in uses PKCE, so there is no client secret and no server of ours in between. Tokens are kept
 only in VS Code's secret storage. **Sign Out of Spotify** deletes them and returns to local mode.
-If your app's quota runs out, Backbeat says so and waits before trying again.
+If your app's quota runs out, Earworm says so and waits before trying again.
 
 ## Develop
 ```bash
 npm install
 npm test          # compiles and runs the unit tests
-npm run package   # builds backbeat-<version>.vsix
+npm run package   # builds earworm-<version>.vsix
 ```
 Press F5 in VS Code to open a window with the extension loaded.
 
@@ -54,5 +54,5 @@ Press F5 in VS Code to open a window with the extension loaded.
 - [ANALYSIS.md](ANALYSIS.md): what is possible today, what is not, and which languages to use
 - [REQUIREMENTS.md](REQUIREMENTS.md): the requirements list, with priorities
 
-"Backbeat" is a placeholder. Spotify's branding guidelines do not allow "Spotify" in a
-third-party product name, so the Marketplace name has to be something else.
+The name has no "Spotify" in it because Spotify's branding guidelines do not allow it in a
+third-party product name.

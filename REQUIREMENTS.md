@@ -55,6 +55,6 @@ Priority: **P0** = MVP (first release) · **P1** = v1.x · **P2** = later or nic
 - Spotify Free users controlling playback through the Web API (Spotify requires Premium)
 
 ## Open questions
-1. The final product name. Free on both the VS Code Marketplace and Open VSX (checked 2026-11-21): Backbeat, Downbeat, Earworm, Playbar.
+1. ~~The final product name?~~ Decided 2026-11-21: **Earworm**. It was free on both the VS Code Marketplace and Open VSX that day (also free: Backbeat, Downbeat, Playbar).
 2. ~~Which OS to build first?~~ Decided: macOS, then Linux, then Windows. All three are built.
 3. Is LRCLIB acceptable for lyrics, or do we leave lyrics out?

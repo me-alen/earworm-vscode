@@ -5,9 +5,9 @@ import * as linux from './linux';
 import * as windows from './windows';
 import { createWebApi, REDIRECT_URI, SignInRequiredError } from './webapi';
 
-const config = () => vscode.workspace.getConfiguration('backbeat');
+const config = () => vscode.workspace.getConfiguration('earworm');
 const locals: Partial<Record<NodeJS.Platform, Player>> = { darwin: macos, linux, win32: windows };
-const TOKENS_KEY = 'backbeat.spotifyTokens';
+const TOKENS_KEY = 'earworm.spotifyTokens';
 const DASHBOARD = 'https://developer.spotify.com/dashboard';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -22,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
       delete: () => context.secrets.delete(TOKENS_KEY),
     },
     openUrl: url => vscode.env.openExternal(vscode.Uri.parse(url)),
-    // The desktop app where Backbeat can start it, otherwise Spotify's web player.
+    // The desktop app where Earworm can start it, otherwise Spotify's web player.
     open: async () => {
       if (local) return local.open();
       await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com'));
@@ -30,13 +30,13 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   const unsupported: Player = new Proxy({} as Player, {
-    get: () => () => Promise.reject(new Error('Backbeat cannot control the Spotify app on this OS. Run "Backbeat: Set Up Spotify Web API" to use the Web API instead.')),
+    get: () => () => Promise.reject(new Error('Earworm cannot control the Spotify app on this OS. Run "Earworm: Set Up Spotify Web API" to use the Web API instead.')),
   });
   const player = (): Player => (webMode() ? web : local ?? unsupported);
 
   const item = (priority: number, command: string, label: string, text?: string) => {
-    const i = vscode.window.createStatusBarItem(`backbeat.${label}`, vscode.StatusBarAlignment.Left, priority);
-    i.name = `Backbeat: ${label}`;
+    const i = vscode.window.createStatusBarItem(`earworm.${label}`, vscode.StatusBarAlignment.Left, priority);
+    i.name = `Earworm: ${label}`;
     i.command = command;
     i.tooltip = label;
     i.accessibilityInformation = { label };
@@ -44,17 +44,17 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(i);
     return i;
   };
-  const prevItem = item(103, 'backbeat.previous', 'Previous Track', '$(chevron-left)');
-  const playItem = item(102, 'backbeat.playPause', 'Play/Pause');
-  const nextItem = item(101, 'backbeat.next', 'Next Track', '$(chevron-right)');
-  const trackItem = item(100, 'backbeat.openSpotify', 'Now Playing');
+  const prevItem = item(103, 'earworm.previous', 'Previous Track', '$(chevron-left)');
+  const playItem = item(102, 'earworm.playPause', 'Play/Pause');
+  const nextItem = item(101, 'earworm.next', 'Next Track', '$(chevron-right)');
+  const trackItem = item(100, 'earworm.openSpotify', 'Now Playing');
   const buttons = [prevItem, playItem, nextItem];
 
   let lastVolume: number | undefined; // volume before muting, restored on unmute
 
   function render(state: PlayerState) {
     trackItem.show();
-    trackItem.command = 'backbeat.openSpotify';
+    trackItem.command = 'earworm.openSpotify';
     if (state.kind === 'notRunning') {
       buttons.forEach(b => b.hide());
       trackItem.text = '$(music) Spotify';
@@ -77,9 +77,9 @@ export function activate(context: vscode.ExtensionContext) {
     buttons.forEach(b => b.hide());
     const signIn = err instanceof SignInRequiredError;
     trackItem.text = signIn ? '$(account) Sign in to Spotify' : '$(warning) Spotify';
-    trackItem.command = signIn ? 'backbeat.signIn' : 'backbeat.openSpotify';
+    trackItem.command = signIn ? 'earworm.signIn' : 'earworm.openSpotify';
     trackItem.tooltip = err instanceof Error ? err.message : String(err);
-    trackItem.accessibilityInformation = { label: `Backbeat: ${trackItem.tooltip}` };
+    trackItem.accessibilityInformation = { label: `Earworm: ${trackItem.tooltip}` };
     trackItem.show();
   }
 
@@ -104,7 +104,7 @@ export function activate(context: vscode.ExtensionContext) {
     } else if (err instanceof SignInRequiredError) {
       if (await vscode.window.showInformationMessage(err.message, 'Sign In') === 'Sign In') await signIn();
     } else {
-      void vscode.window.showErrorMessage(`Backbeat: ${err instanceof Error ? err.message : String(err)}`);
+      void vscode.window.showErrorMessage(`Earworm: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -121,8 +121,8 @@ export function activate(context: vscode.ExtensionContext) {
     await config().update('mode', 'webApi', vscode.ConfigurationTarget.Global);
     const state = await web.getState();
     void vscode.window.showInformationMessage(state.kind === 'notRunning'
-      ? 'Signed in. Backbeat now uses the Spotify Web API. Start playing on any device to see it here.'
-      : 'Signed in. Backbeat now uses the Spotify Web API.');
+      ? 'Signed in. Earworm now uses the Spotify Web API. Start playing on any device to see it here.'
+      : 'Signed in. Earworm now uses the Spotify Web API.');
   }
 
   async function setUpWebApi() {
@@ -156,13 +156,13 @@ export function activate(context: vscode.ExtensionContext) {
     await web.signOut();
     if (local && webMode()) await config().update('mode', 'local', vscode.ConfigurationTarget.Global);
     void vscode.window.showInformationMessage(local
-      ? 'Signed out of Spotify. Backbeat is back in local mode, controlling the Spotify app on this computer.'
+      ? 'Signed out of Spotify. Earworm is back in local mode, controlling the Spotify app on this computer.'
       : 'Signed out of Spotify.');
   }
 
   // Spotify takes a moment to apply a command, so refresh shortly after.
   const command = (id: string, fn: () => Promise<unknown>) =>
-    vscode.commands.registerCommand(`backbeat.${id}`, async () => {
+    vscode.commands.registerCommand(`earworm.${id}`, async () => {
       try { await fn(); } catch (err) { await showError(err); }
       setTimeout(() => void refresh(), 250);
     });
@@ -192,7 +192,7 @@ export function activate(context: vscode.ExtensionContext) {
     command('signOut', signOut),
     vscode.window.onDidChangeWindowState(s => { if (s.focused) void refresh(); }),
     vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('backbeat')) { schedule(); void refresh(); }
+      if (e.affectsConfiguration('earworm')) { schedule(); void refresh(); }
     }),
     { dispose: () => clearInterval(timer) },
   );
@@ -200,7 +200,7 @@ export function activate(context: vscode.ExtensionContext) {
   if (!local && !webMode() && !context.globalState.get('warnedPlatform')) {
     void context.globalState.update('warnedPlatform', true);
     void vscode.window.showInformationMessage(
-      'Backbeat can control the Spotify app only on macOS, Linux and Windows. On this OS, set up Spotify Web API mode instead.',
+      'Earworm can control the Spotify app only on macOS, Linux and Windows. On this OS, set up Spotify Web API mode instead.',
       'Set Up',
     ).then(choice => { if (choice) void setUpWebApi(); });
   }

@@ -7,7 +7,7 @@ import * as path from 'node:path';
 import * as linux from '../src/linux';
 import { NotRunningError } from '../src/common';
 
-const enabled = process.env.BACKBEAT_LINUX_IT === '1';
+const enabled = process.env.EARWORM_LINUX_IT === '1';
 
 async function waitFor(check: () => Promise<boolean>, what: string) {
   for (let i = 0; i < 50; i++) {
@@ -17,7 +17,7 @@ async function waitFor(check: () => Promise<boolean>, what: string) {
   throw new Error(`Timed out waiting for ${what}`);
 }
 
-test('Linux backend against a fake Spotify', { skip: !enabled && 'set BACKBEAT_LINUX_IT=1 (CI only)' }, async t => {
+test('Linux backend against a fake Spotify', { skip: !enabled && 'set EARWORM_LINUX_IT=1 (CI only)' }, async t => {
   assert.deepEqual(await linux.getState(), { kind: 'notRunning' });
   await assert.rejects(linux.playPause(), NotRunningError);
 

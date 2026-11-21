@@ -9,8 +9,8 @@ import * as path from 'node:path';
 import * as windows from '../src/windows';
 import { NotRunningError, PlayerState } from '../src/common';
 
-const enabled = process.env.BACKBEAT_WINDOWS_IT === '1';
-const skip = !enabled && 'set BACKBEAT_WINDOWS_IT=1 (CI only)';
+const enabled = process.env.EARWORM_WINDOWS_IT === '1';
+const skip = !enabled && 'set EARWORM_WINDOWS_IT=1 (CI only)';
 after(() => windows.dispose());
 
 async function waitFor(check: () => Promise<boolean>, what: string) {
@@ -30,7 +30,7 @@ test('Windows backend without Spotify', { skip }, async () => {
 });
 
 test('Windows backend against a fake Spotify', { skip }, async t => {
-  const exe = path.join(mkdtempSync(path.join(os.tmpdir(), 'backbeat-')), 'Spotify.exe');
+  const exe = path.join(mkdtempSync(path.join(os.tmpdir(), 'earworm-')), 'Spotify.exe');
   copyFileSync(path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'), exe);
   // Source path, not out/: tsc does not copy .ps1 files.
   const fake = spawn(exe, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', path.join(__dirname, '../../test/fake-spotify.ps1')], { stdio: 'inherit' });
