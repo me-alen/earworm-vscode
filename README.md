@@ -111,6 +111,13 @@ publishes to the VS Code Marketplace (Trusted Publishing, no token) and Open VSX
 repository secret), and attaches the `.vsix` to a GitHub release with that changelog section as
 notes. A tag that does not match `package.json` stops the release.
 
+## Contributing
+Bug reports and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Docs
+- [ANALYSIS.md](ANALYSIS.md): what is possible today, what is not, and which languages to use
+- [REQUIREMENTS.md](REQUIREMENTS.md): the requirements list, with priorities
+
 ## Name
 The name has no "Spotify" in it because Spotify's branding guidelines do not allow it in a
 third-party product name.
