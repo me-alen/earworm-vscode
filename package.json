@@ -4,11 +4,11 @@
   "description": "Control Spotify from VS Code: the desktop app on macOS, Linux and Windows with no sign-in, or any device plus search and your library through the Spotify Web API.",
   "icon": "images/icon.png",
   "version": "0.1.0",
-  "publisher": "me-alen",
+  "publisher": "alenfrancis",
   "author": {
     "name": "Alen Francis"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "repository": {
     "type": "git",
@@ -247,7 +247,7 @@
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
     "test": "npm run compile && node --test \"out/test/**/*.test.js\"",
-    "package": "npm run compile && npx --yes @vscode/vsce package --skip-license"
+    "package": "npm run compile && npx --yes @vscode/vsce package"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

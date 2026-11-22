@@ -67,9 +67,9 @@ npm run package   # builds earworm-<version>.vsix
 ```
 Press F5 in VS Code to open a window with the extension loaded.
 
-## Docs
-- [ANALYSIS.md](ANALYSIS.md): what is possible today, what is not, and which languages to use
-- [REQUIREMENTS.md](REQUIREMENTS.md): the requirements list, with priorities
-
+## Name
 The name has no "Spotify" in it because Spotify's branding guidelines do not allow it in a
 third-party product name.
+
+## License
+MIT
