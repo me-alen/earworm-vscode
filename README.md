@@ -36,8 +36,8 @@ per app, so Earworm cannot ship a shared one.
 
 Run **Earworm: Set Up Spotify Web API** and follow the steps:
 1. In the [Spotify dashboard](https://developer.spotify.com/dashboard), create an app and tick "Web API".
-2. Add the redirect URI `http://127.0.0.1/callback` (Earworm copies it for you). No port is
-   needed: Spotify accepts any port for loopback addresses, and Earworm picks a free one.
+2. Add the redirect URI `http://127.0.0.1:43117/callback` (Earworm copies it for you) and click
+   **Add**. Earworm listens on that port only while you sign in.
 3. Paste the app's Client ID into Earworm, then approve the sign-in in your browser.
 
 Sign-in uses PKCE, so there is no client secret and no server of ours in between. Tokens are kept
@@ -70,6 +70,24 @@ the library existed, Earworm asks you to sign in once more to allow the extra pe
 next to the song in the status bar shows whether it is in your Liked Songs. Click it, or run
 **Earworm: Like/Unlike Current Song**, to add or remove it. If you signed in before this
 existed, Earworm asks you to sign in once more.
+
+## Privacy
+Earworm has no servers, no analytics and no telemetry. It collects nothing about you.
+
+- **Local mode** talks only to the Spotify app on your computer (AppleScript on macOS, D-Bus on
+  Linux, the Windows media controls on Windows). Nothing leaves your computer.
+- **Web API mode** talks only to Spotify (`accounts.spotify.com` and `api.spotify.com`), through
+  your own Spotify developer app. It asks for permission to read and control playback, read your
+  queue, recently played songs, liked songs, playlists and saved albums, and save or remove liked songs.
+  It uses what Spotify returns only to show it to you in VS Code, and keeps nothing on disk
+  except its sign-in tokens.
+- **Sign-in tokens** are kept in VS Code's secret storage (your OS keychain), never in settings
+  or files. Your Spotify password never passes through Earworm.
+- **To disconnect**, run **Earworm: Sign Out of Spotify**, which deletes the tokens, and remove
+  your app under [Manage apps](https://www.spotify.com/account/apps/) in your Spotify account.
+
+Spotify's own [privacy policy](https://www.spotify.com/legal/privacy-policy/) covers what Spotify
+does with your data.
 
 ## Develop
 ```bash

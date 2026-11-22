@@ -5,7 +5,6 @@
 // No vscode import here, so the tests can drive the whole flow.
 import { createHash, randomBytes } from 'node:crypto';
 import * as http from 'node:http';
-import { AddressInfo } from 'node:net';
 import { NotRunningError, Player, PlayerState, WebApiUnavailableError, withProgress } from './common';
 
 const ACCOUNTS = 'https://accounts.spotify.com';
@@ -14,8 +13,11 @@ const API = 'https://api.spotify.com/v1';
 const SCOPES = 'user-read-playback-state user-modify-playback-state user-read-currently-playing user-read-recently-played '
   + 'user-library-read user-library-modify playlist-read-private playlist-read-collaborative';
 const CALLBACK = '/callback';
-/** What the user registers in the Spotify dashboard. Spotify lets loopback URIs take any port at sign-in. */
-export const REDIRECT_URI = `http://127.0.0.1${CALLBACK}`;
+// Spotify's docs allow a portless loopback URI with any port at sign-in, but the dashboard
+// rejects it as "not secure", so Earworm uses one fixed, rarely used port.
+const PORT = 43117;
+/** What the user registers in the Spotify dashboard. */
+export const REDIRECT_URI = `http://127.0.0.1:${PORT}${CALLBACK}`;
 const NO_DEVICE = 'No Spotify device is active. Start playing on any device (computer, phone, web player), then try again.';
 
 interface Tokens { access: string; refresh: string; expiresAt: number; clientId: string }
@@ -313,11 +315,13 @@ export function createWebApi(d: Deps): WebApi {
       const state = randomBytes(16).toString('base64url');
       const server = http.createServer();
       await new Promise<void>((resolve, reject) => {
-        server.once('error', reject);
-        server.listen(0, '127.0.0.1', resolve);
+        server.once('error', (err: NodeJS.ErrnoException) => reject(err.code === 'EADDRINUSE'
+          ? new Error(`Port ${PORT} is in use, so Spotify cannot hand the sign-in back to VS Code. Close whatever uses it (or another VS Code window that is signing in), then try again.`)
+          : err));
+        server.listen(PORT, '127.0.0.1', resolve);
       });
       try {
-        const redirectUri = `http://127.0.0.1:${(server.address() as AddressInfo).port}${CALLBACK}`;
+        const redirectUri = REDIRECT_URI;
         const code = new Promise<string>((resolve, reject) => {
           const timer = setTimeout(() => reject(new Error('Sign-in timed out. Try again.')), 5 * 60_000);
           signal?.addEventListener('abort', () => { clearTimeout(timer); reject(new Error('Sign-in was cancelled.')); });

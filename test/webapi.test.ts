@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { challengeFor, createWebApi, parseAlbums, parseDevices, parsePlayback, parsePlaylists, parseSearch, parseSong, SignInRequiredError } from '../src/webapi';
+import { challengeFor, createWebApi, parseAlbums, parseDevices, parsePlayback, parsePlaylists, parseSearch, parseSong, REDIRECT_URI, SignInRequiredError } from '../src/webapi';
 import { NotRunningError, WebApiUnavailableError } from '../src/common';
 
 const json = (status: number, body?: unknown, headers: Record<string, string> = {}) =>
@@ -104,7 +104,7 @@ function fake(browser?: (redirect: string, state: string) => string) {
       for (const needed of ['user-read-playback-state', 'user-modify-playback-state', 'user-library-read', 'user-library-modify', 'playlist-read-private']) {
         assert.ok(scopes.includes(needed), needed);
       }
-      assert.match(q.get('redirect_uri')!, /^http:\/\/127\.0\.0\.1:\d+\/callback$/);
+      assert.equal(q.get('redirect_uri'), REDIRECT_URI);
       assert.doesNotMatch(url, /\+/); // spaces as %20
       s.challenge = q.get('code_challenge')!;
       const redirect = q.get('redirect_uri')!;
@@ -390,4 +390,19 @@ test('an unreachable Spotify is marked offline', async () => {
     fetch: (async () => { throw new TypeError('fetch failed'); }) as typeof fetch,
   });
   await assert.rejects(api.getState(), (e: any) => e instanceof WebApiUnavailableError && e.reason === 'offline' && /fetch failed/.test(e.message));
+});
+
+test('the redirect URI is a loopback IP with a port, as the Spotify dashboard requires', () => {
+  assert.match(REDIRECT_URI, /^http:\/\/127\.0\.0\.1:\d+\/callback$/);
+});
+
+test('sign-in explains a busy port', async () => {
+  const http = await import('node:http');
+  const blocker = http.createServer();
+  await new Promise<void>(r => blocker.listen(Number(new URL(REDIRECT_URI).port), '127.0.0.1', r));
+  try {
+    await assert.rejects(fake().api.signIn(), /in use/);
+  } finally {
+    blocker.close();
+  }
 });

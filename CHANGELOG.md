@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 (2026-11-22)
+
+- Web API sign-in now uses the redirect URI `http://127.0.0.1:43117/callback`. The Spotify dashboard rejects the portless `http://127.0.0.1/callback` that earlier versions asked for. If you already registered the old one, add the new one in your app's settings.
+- The README has a Privacy section: Earworm collects nothing and talks only to Spotify.
+
 ## 0.4.0 (2026-11-22)
 
 - In Web API mode, playback controls and the status bar now fall back to the Spotify app on this computer when the Web API cannot be used: quota used up, rate limited, no Premium, or no internet. Earworm says why once, and goes back to the Web API as soon as it works.
