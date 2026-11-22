@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2 (2026-11-22)
+
+- When Spotify refuses a command for what is playing (for example shuffle during autoplay or radio), Earworm now says so in plain words instead of "Restriction violated".
+
 ## 0.4.1 (2026-11-22)
 
 - Web API sign-in now uses the redirect URI `http://127.0.0.1:43117/callback`. The Spotify dashboard rejects the portless `http://127.0.0.1/callback` that earlier versions asked for. If you already registered the old one, add the new one in your app's settings.

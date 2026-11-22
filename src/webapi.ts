@@ -261,6 +261,8 @@ export function createWebApi(d: Deps): WebApi {
     if (reason === 'PREMIUM_REQUIRED') {
       throw new WebApiUnavailableError('Controlling playback through the Web API needs Spotify Premium.', 'premium');
     }
+    // e.g. shuffle or repeat while autoplay or radio is playing, or skipping during an ad
+    if (/restriction violated/i.test(message)) throw new Error('Spotify does not allow that for what is playing right now (for example autoplay, radio or an ad).');
     if (reason === 'VOLUME_CONTROL_DISALLOW') throw new Error('This Spotify device does not let other apps change its volume.');
     if (res.status === 403 && /scope/i.test(message)) {
       throw new SignInRequiredError('Earworm needs more Spotify permissions for this. Sign in again to grant them.');

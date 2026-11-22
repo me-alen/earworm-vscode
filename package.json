@@ -3,7 +3,7 @@
   "displayName": "Earworm",
   "description": "Control Spotify from VS Code: the desktop app on macOS, Linux and Windows with no sign-in, or any device plus search and your library through the Spotify Web API.",
   "icon": "images/icon.png",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "publisher": "alenfrancis",
   "author": {
     "name": "Alen Francis"

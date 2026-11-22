@@ -406,3 +406,9 @@ test('sign-in explains a busy port', async () => {
     blocker.close();
   }
 });
+
+test('a command Spotify forbids right now gets a plain explanation', async () => {
+  const { s, api } = await signedIn();
+  s.next = json(403, { error: { status: 403, message: 'Player command failed: Restriction violated', reason: 'UNKNOWN' } });
+  await assert.rejects(api.next(), /does not allow that for what is playing right now/);
+});
