@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { challengeFor, createWebApi, parseDevices, parsePlayback, parseSearch, SignInRequiredError } from '../src/webapi';
+import { challengeFor, createWebApi, parseAlbums, parseDevices, parsePlayback, parsePlaylists, parseSearch, parseSong, SignInRequiredError } from '../src/webapi';
 import { NotRunningError } from '../src/common';
 
 const json = (status: number, body?: unknown, headers: Record<string, string> = {}) =>
@@ -22,6 +22,26 @@ const SEARCH = {
   }] },
   albums: { items: [{ uri: 'spotify:album:a1', name: 'Album One', artists: [{ name: 'Artist A' }], release_date: '2021-05-07', total_tracks: 12 }] },
   playlists: { items: [null, { uri: 'spotify:playlist:p1', name: 'Focus', owner: { display_name: 'Alen' } }] },
+};
+
+// Library replies, trimmed to the fields Earworm reads. Playlists use the February 2026 field names.
+const SONG = { uri: 'spotify:track:t1', name: 'Say "Hi"', duration_ms: 225_000, artists: [{ name: 'Artist A' }], album: { uri: 'spotify:album:a1', name: 'Album One' } };
+const LOCAL_FILE = { uri: 'spotify:local:x', name: 'Demo.mp3', is_local: true };
+const LIBRARY: Record<string, unknown> = {
+  '/v1/me': { id: 'alen' },
+  '/v1/me/player/queue': { currently_playing: SONG, queue: [{ uri: 'spotify:episode:e1', name: 'Ep 1', duration_ms: 60_000, show: { name: 'A Podcast' } }] },
+  '/v1/me/player/recently-played': { items: [{ track: SONG }] },
+  '/v1/me/tracks': { items: [{ track: SONG }, { track: LOCAL_FILE }] },
+  '/v1/me/playlists': { items: [
+    { id: 'p1', uri: 'spotify:playlist:p1', name: 'Mine', owner: { id: 'alen', display_name: 'Alen' }, items: { total: 2 } },
+    { id: 'p2', uri: 'spotify:playlist:p2', name: 'Shared', collaborative: true, owner: { id: 'sam', display_name: 'Sam' } },
+    { id: 'p3', uri: 'spotify:playlist:p3', name: 'Theirs', owner: { id: 'spotify', display_name: 'Spotify' }, tracks: { total: 50 } },
+  ] },
+  '/v1/playlists/p1/items': { items: [{ item: SONG }, { item: null }] },
+  '/v1/me/albums': { items: [{ album: {
+    uri: 'spotify:album:a1', name: 'Album One', artists: [{ name: 'Artist A' }], release_date: '2021-05-07',
+    tracks: { items: [{ uri: 'spotify:track:t1', name: 'Say "Hi"', duration_ms: 225_000, artists: [{ name: 'Artist A' }] }] },
+  } }] },
 };
 
 /** A fake Spotify (accounts + Web API) and a fake browser that completes the sign-in. */
@@ -58,6 +78,7 @@ function fake(browser?: (redirect: string, state: string) => string) {
     if (once) return once;
     if (url.pathname === '/v1/me/player/devices') return json(200, { devices: s.devices });
     if (url.pathname === '/v1/search') return json(200, SEARCH);
+    if (url.pathname in LIBRARY) return json(200, LIBRARY[url.pathname]);
     if (init?.method === 'GET') return s.player ? json(200, s.player) : json(204);
     return json(204);
   }) as typeof fetch;
@@ -72,7 +93,7 @@ function fake(browser?: (redirect: string, state: string) => string) {
     openUrl: async url => {
       const q = new URL(url).searchParams;
       assert.equal(q.get('code_challenge_method'), 'S256');
-      assert.equal(q.get('scope'), 'user-read-playback-state user-modify-playback-state');
+      assert.match(q.get('scope')!, /^user-read-playback-state user-modify-playback-state .*user-library-read playlist-read-private/);
       assert.match(q.get('redirect_uri')!, /^http:\/\/127\.0\.0\.1:\d+\/callback$/);
       assert.doesNotMatch(url, /\+/); // spaces as %20
       s.challenge = q.get('code_challenge')!;
@@ -269,4 +290,55 @@ test('devices and transfer call the right endpoints', async () => {
     'GET /me/player/devices Bearer access-1',
     'PUT /me/player Bearer access-1 {"device_ids":["phone"]}',
   ]);
+});
+
+test('parseSong skips local files and empty entries; episodes show their podcast', () => {
+  assert.equal(parseSong(LOCAL_FILE), undefined);
+  assert.equal(parseSong(null), undefined);
+  assert.deepEqual(parseSong({ uri: 'spotify:episode:e1', name: 'Ep 1', show: { name: 'A Podcast' } }),
+    { kind: 'track', uri: 'spotify:episode:e1', name: 'Ep 1', by: 'A Podcast', detail: 'A Podcast', contextUri: undefined });
+});
+
+test('parsePlaylists marks which playlists Spotify will list the songs of', () => {
+  assert.deepEqual(parsePlaylists(LIBRARY['/v1/me/playlists'], 'alen').map(p => [p.name, p.by, p.detail, p.readable]), [
+    ['Mine', '', '2 songs', true],
+    ['Shared', 'by Sam', undefined, true],
+    ['Theirs', 'by Spotify', '50 songs', false],
+  ]);
+});
+
+test('parseAlbums plays each song within its album', () => {
+  const [album] = parseAlbums(LIBRARY['/v1/me/albums']);
+  assert.equal(album.detail, '2021');
+  assert.deepEqual(album.songs, [{ kind: 'track', uri: 'spotify:track:t1', name: 'Say "Hi"', by: 'Artist A', detail: '3:45', contextUri: 'spotify:album:a1' }]);
+});
+
+test('library lists call the right endpoints and set what each song plays within', async () => {
+  const { s, api } = await signedIn();
+  const queue = await api.queue();
+  assert.equal(queue.now?.name, 'Say "Hi"');
+  assert.deepEqual(queue.next.map(x => x.by), ['A Podcast']);
+  assert.equal((await api.recentlyPlayed())[0].contextUri, 'spotify:album:a1');
+  assert.deepEqual((await api.likedSongs()).map(x => x.contextUri), ['spotify:user:alen:collection']);
+  const [mine] = await api.playlists();
+  assert.deepEqual((await api.playlistSongs(mine)).map(x => x.contextUri), ['spotify:playlist:p1']);
+  assert.equal((await api.albums()).length, 1);
+  await api.play((await api.likedSongs())[0]);
+  assert.deepEqual(s.calls, [
+    'GET /me/player/queue Bearer access-1',
+    'GET /me/player/recently-played?limit=50 Bearer access-1',
+    'GET /me/tracks?limit=50 Bearer access-1',
+    'GET /me Bearer access-1', // asked once, then remembered
+    'GET /me/playlists?limit=50 Bearer access-1',
+    'GET /playlists/p1/items?limit=50 Bearer access-1',
+    'GET /me/albums?limit=50 Bearer access-1',
+    'GET /me/tracks?limit=50 Bearer access-1',
+    'PUT /me/player/play Bearer access-1 {"context_uri":"spotify:user:alen:collection","offset":{"uri":"spotify:track:t1"}}',
+  ]);
+});
+
+test('a token from before the library scopes asks the user to sign in again', async () => {
+  const { s, api } = await signedIn();
+  s.next = json(403, { error: { status: 403, message: 'Insufficient client scope' } });
+  await assert.rejects(api.likedSongs(), SignInRequiredError);
 });

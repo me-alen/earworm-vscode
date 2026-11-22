@@ -6,6 +6,7 @@ import * as windows from './windows';
 import { createWebApi, REDIRECT_URI, SignInRequiredError } from './webapi';
 import { showSearch } from './search';
 import { pickDevice } from './devices';
+import { Library, Node } from './library';
 
 const config = () => vscode.workspace.getConfiguration('earworm');
 const locals: Partial<Record<NodeJS.Platform, Player>> = { darwin: macos, linux, win32: windows };
@@ -30,6 +31,13 @@ export function activate(context: vscode.ExtensionContext) {
       await vscode.env.openExternal(vscode.Uri.parse('https://open.spotify.com'));
     },
   });
+
+  const library = new Library(web);
+  // Shows the sidebar's sign-in welcome instead of the tree when there are no tokens.
+  const syncSignedIn = async () => {
+    await vscode.commands.executeCommand('setContext', 'earworm.signedIn', await web.signedIn());
+    library.refresh();
+  };
 
   const unsupported: Player = new Proxy({} as Player, {
     get: () => () => Promise.reject(new Error('Earworm cannot control the Spotify app on this OS. Run "Earworm: Set Up Spotify Web API" to use the Web API instead.')),
@@ -124,6 +132,7 @@ export function activate(context: vscode.ExtensionContext) {
         return web.signIn(abort.signal);
       },
     );
+    await syncSignedIn();
     await config().update('mode', 'webApi', vscode.ConfigurationTarget.Global);
     const state = await web.getState();
     void vscode.window.showInformationMessage(state.kind === 'notRunning'
@@ -160,6 +169,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   async function signOut() {
     await web.signOut();
+    await syncSignedIn();
     if (local && webMode()) await config().update('mode', 'local', vscode.ConfigurationTarget.Global);
     void vscode.window.showInformationMessage(local
       ? 'Signed out of Spotify. Earworm is back in local mode, controlling the Spotify app on this computer.'
@@ -167,9 +177,9 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Spotify takes a moment to apply a command, so refresh shortly after.
-  const command = (id: string, fn: () => Promise<unknown>) =>
-    vscode.commands.registerCommand(`earworm.${id}`, async () => {
-      try { await fn(); } catch (err) { await showError(err); }
+  const command = (id: string, fn: (...args: any[]) => Promise<unknown>) =>
+    vscode.commands.registerCommand(`earworm.${id}`, async (...args: any[]) => {
+      try { await fn(...args); } catch (err) { await showError(err); }
       setTimeout(() => void refresh(), 250);
     });
 
@@ -204,6 +214,17 @@ export function activate(context: vscode.ExtensionContext) {
       await requireSignIn('Choosing a device');
       await pickDevice(web);
     }),
+    vscode.window.registerTreeDataProvider('earworm.library', library),
+    vscode.commands.registerCommand('earworm.refreshLibrary', () => library.refresh()),
+    command('playItem', async (n: Node) => {
+      await web.play(n.item!);
+      setTimeout(() => library.refreshQueue(), 1000);
+    }),
+    command('queueItem', async (n: Node) => {
+      await web.addToQueue(n.item!);
+      vscode.window.setStatusBarMessage(`$(check) Added "${n.item!.name}" to the queue`, 4000);
+      library.refreshQueue();
+    }),
     vscode.window.onDidChangeWindowState(s => { if (s.focused) void refresh(); }),
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('earworm')) { schedule(); void refresh(); }
@@ -221,6 +242,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   schedule();
   void refresh();
+  void syncSignedIn();
 }
 
 export function deactivate() {

@@ -10,7 +10,9 @@ import { NotRunningError, Player, PlayerState } from './common';
 
 const ACCOUNTS = 'https://accounts.spotify.com';
 const API = 'https://api.spotify.com/v1';
-const SCOPES = 'user-read-playback-state user-modify-playback-state';
+// Changing these makes existing users sign in again (a 403 "Insufficient client scope" asks them to).
+const SCOPES = 'user-read-playback-state user-modify-playback-state user-read-currently-playing user-read-recently-played '
+  + 'user-library-read playlist-read-private playlist-read-collaborative';
 const CALLBACK = '/callback';
 /** What the user registers in the Spotify dashboard. Spotify lets loopback URIs take any port at sign-in. */
 export const REDIRECT_URI = `http://127.0.0.1${CALLBACK}`;
@@ -75,15 +77,23 @@ export interface SearchItem {
 const names = (list?: { name: string }[]) => (list ?? []).map(x => x.name).join(', ');
 const duration = (ms?: number) => (ms ? `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}` : '');
 
+/** A song or podcast episode, played within contextUri (its album by default). Local files cannot be played remotely. */
+export function parseSong(t: any, contextUri: string | undefined = t?.album?.uri): SearchItem | undefined {
+  if (!t?.uri || t.is_local) return undefined;
+  return {
+    kind: 'track', uri: t.uri, name: t.name, by: names(t.artists) || t.show?.name || '',
+    detail: [t.album?.name ?? t.show?.name, duration(t.duration_ms)].filter(Boolean).join(' · '),
+    contextUri,
+  };
+}
+const songs = (list: any[] | undefined, contextUri?: string) =>
+  (list ?? []).map(t => parseSong(t, contextUri ?? t?.album?.uri)).filter((x): x is SearchItem => !!x);
+const list = (x: any) => ((x?.items ?? []) as any[]).filter(Boolean);
+
 /** Turns GET /search into a flat list: songs, then albums, then playlists. Spotify can return null entries. */
 export function parseSearch(r: any): SearchItem[] {
-  const list = (x: any) => ((x?.items ?? []) as any[]).filter(Boolean);
   return [
-    ...list(r?.tracks).map((t): SearchItem => ({
-      kind: 'track', uri: t.uri, name: t.name, by: names(t.artists),
-      detail: [t.album?.name, duration(t.duration_ms)].filter(Boolean).join(' · '),
-      contextUri: t.album?.uri,
-    })),
+    ...songs(list(r?.tracks)),
     ...list(r?.albums).map((a): SearchItem => ({
       kind: 'album', uri: a.uri, name: a.name, by: names(a.artists),
       detail: [a.release_date?.slice(0, 4), a.total_tracks && `${a.total_tracks} songs`].filter(Boolean).join(' · '),
@@ -92,6 +102,32 @@ export function parseSearch(r: any): SearchItem[] {
       kind: 'playlist', uri: p.uri, name: p.name, by: p.owner?.display_name ? `by ${p.owner.display_name}` : '',
     })),
   ];
+}
+
+export interface Playlist extends SearchItem { id: string; readable: boolean }
+export interface Album extends SearchItem { songs: SearchItem[] }
+export interface Queue { now?: SearchItem; next: SearchItem[] }
+
+/** GET /me/playlists. Since February 2026 Spotify only lists the songs of playlists the user owns or collaborates on. */
+export function parsePlaylists(r: any, me: string): Playlist[] {
+  return list(r).map(p => {
+    const total = (p.items ?? p.tracks)?.total; // "tracks" was renamed "items" in February 2026
+    return {
+      kind: 'playlist', uri: p.uri, id: p.id, name: p.name,
+      by: p.owner?.id === me ? '' : p.owner?.display_name ? `by ${p.owner.display_name}` : '',
+      detail: typeof total === 'number' ? `${total} songs` : undefined,
+      readable: !!p.collaborative || p.owner?.id === me,
+    };
+  });
+}
+
+/** GET /me/albums: each saved album comes with its songs. */
+export function parseAlbums(r: any): Album[] {
+  return list(r).map(x => x.album).filter(Boolean).map(a => ({
+    kind: 'album', uri: a.uri, name: a.name, by: names(a.artists),
+    detail: a.release_date?.slice(0, 4),
+    songs: songs(a.tracks?.items, a.uri),
+  }));
 }
 
 const page = (text: string) =>
@@ -106,6 +142,12 @@ export interface WebApi extends Player {
   addToQueue(item: SearchItem): Promise<void>;
   devices(): Promise<Device[]>;
   transfer(deviceId: string): Promise<void>;
+  queue(): Promise<Queue>;
+  recentlyPlayed(): Promise<SearchItem[]>;
+  likedSongs(): Promise<SearchItem[]>;
+  playlists(): Promise<Playlist[]>;
+  playlistSongs(p: Playlist): Promise<SearchItem[]>;
+  albums(): Promise<Album[]>;
 }
 
 export function createWebApi(d: Deps): WebApi {
@@ -114,6 +156,7 @@ export function createWebApi(d: Deps): WebApi {
   let refreshing: Promise<Tokens> | undefined;
   let blockedUntil = 0;
   let quotaBlocked = false;
+  let userId: Promise<string> | undefined; // the signed-in user's Spotify id, asked for once
 
   async function tokenRequest(body: Record<string, string>, previous?: Tokens): Promise<Tokens> {
     const res = await f(`${ACCOUNTS}/api/token`, {
@@ -203,6 +246,9 @@ export function createWebApi(d: Deps): WebApi {
       throw new Error('Controlling playback through the Web API needs Spotify Premium. Set "earworm.mode" to "local" to control the desktop app instead.');
     }
     if (reason === 'VOLUME_CONTROL_DISALLOW') throw new Error('This Spotify device does not let other apps change its volume.');
+    if (res.status === 403 && /scope/i.test(message)) {
+      throw new SignInRequiredError('Earworm needs more Spotify permissions for this. Sign in again to grant them.');
+    }
     if (res.status === 403 && /registered|user may not/i.test(message)) {
       throw new Error('Spotify refused this account. In the Spotify dashboard, add your Spotify email under your app\'s User Management.');
     }
@@ -224,6 +270,12 @@ export function createWebApi(d: Deps): WebApi {
       }
       return api(method, `${path}${path.includes('?') ? '&' : '?'}device_id=${encodeURIComponent(devices[0].id)}`, body);
     }
+  }
+
+  function me(): Promise<string> {
+    userId ??= api('GET', '/me').then(u => u.id);
+    userId.catch(() => { userId = undefined; });
+    return userId;
   }
 
   const playback = () => api('GET', '/me/player?additional_types=episode');
@@ -281,12 +333,13 @@ export function createWebApi(d: Deps): WebApi {
         });
         await d.store.store(JSON.stringify(tokens));
         blockedUntil = 0;
+        userId = undefined; // may be another account
       } finally {
         server.closeAllConnections();
         server.close();
       }
     },
-    signOut: async () => { await d.store.delete(); },
+    signOut: async () => { await d.store.delete(); userId = undefined; },
     signedIn: async () => !!(await d.store.get()),
 
     // Development-mode apps get at most 10 results per type since February 2026.
@@ -303,6 +356,18 @@ export function createWebApi(d: Deps): WebApi {
       if (item.kind !== 'track') throw new Error('Only songs can be added to the queue.');
       await onDevice('POST', `/me/player/queue?uri=${encodeURIComponent(item.uri)}`);
     },
+
+    // shortcut: lists stop at the first 50 entries; add paging if people miss the rest.
+    async queue() {
+      const r = await api('GET', '/me/player/queue');
+      return { now: parseSong(r?.currently_playing), next: songs(r?.queue) };
+    },
+    recentlyPlayed: async () => songs(list(await api('GET', '/me/player/recently-played?limit=50')).map(x => x.track)),
+    likedSongs: async () => songs(list(await api('GET', '/me/tracks?limit=50')).map(x => x.track), `spotify:user:${await me()}:collection`),
+    playlists: async () => parsePlaylists(await api('GET', '/me/playlists?limit=50'), await me()),
+    playlistSongs: async (p: Playlist) =>
+      songs(list(await api('GET', `/playlists/${encodeURIComponent(p.id)}/items?limit=50`)).map(x => x.item ?? x.track), p.uri),
+    albums: async () => parseAlbums(await api('GET', '/me/albums?limit=50')),
 
     getState: async () => parsePlayback(await playback()),
     playPause: async () => api('PUT', (await active()).is_playing ? '/me/player/pause' : '/me/player/play'),

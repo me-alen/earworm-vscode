@@ -1,7 +1,7 @@
 {
   "name": "earworm",
   "displayName": "Earworm",
-  "description": "Control the Spotify desktop app from VS Code on macOS, Linux and Windows. No sign-in needed.",
+  "description": "Control Spotify from VS Code: the desktop app on macOS, Linux and Windows with no sign-in, or any device plus search and your library through the Spotify Web API.",
   "icon": "images/icon.png",
   "version": "0.1.0",
   "publisher": "me-alen",
@@ -106,8 +106,101 @@
         "command": "earworm.signOut",
         "title": "Sign Out of Spotify",
         "category": "Earworm"
+      },
+      {
+        "command": "earworm.refreshLibrary",
+        "title": "Refresh Library",
+        "category": "Earworm",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "earworm.playItem",
+        "title": "Play",
+        "category": "Earworm",
+        "icon": "$(play)"
+      },
+      {
+        "command": "earworm.queueItem",
+        "title": "Add to Queue",
+        "category": "Earworm",
+        "icon": "$(add)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "earworm",
+          "title": "Earworm",
+          "icon": "images/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "earworm": [
+        {
+          "id": "earworm.library",
+          "name": "Library"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "earworm.library",
+        "when": "!earworm.signedIn",
+        "contents": "See your queue, recently played, liked songs, playlists and albums here. The library uses the Spotify Web API, which needs your own free Spotify developer app and Spotify Premium.\n[Sign In to Spotify](command:earworm.signIn)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "earworm.playItem",
+          "when": "false"
+        },
+        {
+          "command": "earworm.queueItem",
+          "when": "false"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "earworm.search",
+          "when": "view == earworm.library && earworm.signedIn",
+          "group": "navigation@1"
+        },
+        {
+          "command": "earworm.pickDevice",
+          "when": "view == earworm.library && earworm.signedIn",
+          "group": "navigation@2"
+        },
+        {
+          "command": "earworm.refreshLibrary",
+          "when": "view == earworm.library && earworm.signedIn",
+          "group": "navigation@3"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "earworm.queueItem",
+          "when": "view == earworm.library && viewItem == song",
+          "group": "inline"
+        },
+        {
+          "command": "earworm.playItem",
+          "when": "view == earworm.library && viewItem == collection",
+          "group": "inline"
+        },
+        {
+          "command": "earworm.playItem",
+          "when": "view == earworm.library && viewItem =~ /song|collection/",
+          "group": "1_play@1"
+        },
+        {
+          "command": "earworm.queueItem",
+          "when": "view == earworm.library && viewItem == song",
+          "group": "1_play@2"
+        }
+      ]
+    },
     "configuration": {
       "title": "Earworm",
       "properties": {
