@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3 (2026-11-22)
+
+- No changes to the extension. The first version published automatically to the VS Code Marketplace and Open VSX by GitHub Actions.
+
 ## 0.4.2 (2026-11-22)
 
 - When Spotify refuses a command for what is playing (for example shuffle during autoplay or radio), Earworm now says so in plain words instead of "Restriction violated".
