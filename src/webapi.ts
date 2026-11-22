@@ -6,7 +6,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import * as http from 'node:http';
 import { AddressInfo } from 'node:net';
-import { NotRunningError, Player, PlayerState, withProgress } from './common';
+import { NotRunningError, Player, PlayerState, WebApiUnavailableError, withProgress } from './common';
 
 const ACCOUNTS = 'https://accounts.spotify.com';
 const API = 'https://api.spotify.com/v1';
@@ -163,8 +163,17 @@ export function createWebApi(d: Deps): WebApi {
   let quotaBlocked = false;
   let userId: Promise<string> | undefined; // the signed-in user's Spotify id, asked for once
 
+  // fetch only rejects when Spotify cannot be reached at all (offline, DNS, TLS).
+  async function reach(url: string, init: RequestInit): Promise<Response> {
+    try {
+      return await f(url, init);
+    } catch (err) {
+      throw new WebApiUnavailableError(`Could not reach Spotify (${err instanceof Error ? err.message : String(err)}). Check your internet connection.`, 'offline');
+    }
+  }
+
   async function tokenRequest(body: Record<string, string>, previous?: Tokens): Promise<Tokens> {
-    const res = await f(`${ACCOUNTS}/api/token`, {
+    const res = await reach(`${ACCOUNTS}/api/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(body),
@@ -211,18 +220,18 @@ export function createWebApi(d: Deps): WebApi {
     return t.expiresAt - 60_000 > now() ? t.access : (await refresh()).access;
   }
 
-  function blockedMessage() {
+  function blocked() {
     const seconds = Math.ceil((blockedUntil - now()) / 1000);
     return quotaBlocked
-      ? `Your Spotify app has used up its Web API quota. Earworm will try again in ${Math.ceil(seconds / 60)} min. Local mode still works meanwhile.`
-      : `Spotify asked Earworm to slow down. Trying again in ${seconds} s.`;
+      ? new WebApiUnavailableError(`Your Spotify app has used up its Web API quota. Earworm will try again in ${Math.ceil(seconds / 60)} min.`, 'quota')
+      : new WebApiUnavailableError(`Spotify asked Earworm to slow down. Trying again in ${seconds} s.`, 'rateLimit');
   }
 
   async function api(method: string, path: string, body?: unknown, retried = false): Promise<any> {
-    if (now() < blockedUntil) throw new Error(blockedMessage());
+    if (now() < blockedUntil) throw blocked();
     const headers: Record<string, string> = { Authorization: `Bearer ${await accessToken()}` };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
-    const res = await f(API + path, {
+    const res = await reach(API + path, {
       method,
       headers,
       // Spotify wants a Content-Length on PUT/POST, so send an empty body rather than none.
@@ -244,11 +253,11 @@ export function createWebApi(d: Deps): WebApi {
       // shortcut: 10 minutes when a quota 429 has no Retry-After; Spotify does not document the reset.
       const wait = Number(res.headers.get('Retry-After')) || (quotaBlocked ? 600 : 30);
       blockedUntil = now() + wait * 1000;
-      throw new Error(blockedMessage());
+      throw blocked();
     }
     if (res.status === 404 && reason === 'NO_ACTIVE_DEVICE') throw new NotRunningError(NO_DEVICE);
     if (reason === 'PREMIUM_REQUIRED') {
-      throw new Error('Controlling playback through the Web API needs Spotify Premium. Set "earworm.mode" to "local" to control the desktop app instead.');
+      throw new WebApiUnavailableError('Controlling playback through the Web API needs Spotify Premium.', 'premium');
     }
     if (reason === 'VOLUME_CONTROL_DISALLOW') throw new Error('This Spotify device does not let other apps change its volume.');
     if (res.status === 403 && /scope/i.test(message)) {

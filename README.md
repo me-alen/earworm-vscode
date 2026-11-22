@@ -44,6 +44,11 @@ Sign-in uses PKCE, so there is no client secret and no server of ours in between
 only in VS Code's secret storage. **Sign Out of Spotify** deletes them and returns to local mode.
 If your app's quota runs out, Earworm says so and waits before trying again.
 
+When the Web API cannot be used (quota used up, Spotify asking it to slow down, no Premium, or no
+internet), playback controls and the status bar fall back to the Spotify app on this computer,
+like local mode, and Earworm tells you once why. They return to the Web API as soon as it works
+again. Search, devices, the library and the heart need the Web API and do not fall back.
+
 **Earworm: Search Spotify** (Web API mode) searches songs, albums and playlists as you type.
 Enter plays the result: a song plays within its album, so playback carries on after it. The
 **+** button next to a song adds it to the queue and keeps the search open for more. Spotify

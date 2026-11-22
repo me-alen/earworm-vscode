@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0 (2026-11-22)
+
+- In Web API mode, playback controls and the status bar now fall back to the Spotify app on this computer when the Web API cannot be used: quota used up, rate limited, no Premium, or no internet. Earworm says why once, and goes back to the Web API as soon as it works.
+
 ## 0.3.0 (2026-11-22)
 
 - Like or unlike the song playing now: a heart in the status bar, or **Earworm: Like/Unlike Current Song**. Needs Web API sign-in and works in either mode. If you signed in before, Earworm asks you to sign in once more to allow saving songs.

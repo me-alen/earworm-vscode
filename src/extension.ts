@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { NotRunningError, Player, PlayerState, Progress, progressText } from './common';
+import { NotRunningError, Player, PlayerState, Progress, progressText, WebApiUnavailableError, withFallback } from './common';
 import * as macos from './macos';
 import * as linux from './linux';
 import * as windows from './windows';
@@ -45,7 +45,15 @@ export function activate(context: vscode.ExtensionContext) {
   const unsupported: Player = new Proxy({} as Player, {
     get: () => () => Promise.reject(new Error('Earworm cannot control the Spotify app on this OS. Run "Earworm: Set Up Spotify Web API" to use the Web API instead.')),
   });
-  const player = (): Player => (webMode() ? web : local ?? unsupported);
+  // In Web API mode, playback falls back to the Spotify app on this computer when the Web API
+  // cannot be used (quota, rate limit, no Premium, offline). Each reason is explained once per session.
+  const toldAbout = new Set<string>();
+  const webOrLocal = local ? withFallback(web, local, (err: WebApiUnavailableError) => {
+    if (toldAbout.has(err.reason)) return;
+    toldAbout.add(err.reason);
+    void vscode.window.showInformationMessage(`${err.message} Earworm is controlling the Spotify app on this computer instead.`);
+  }) : web;
+  const player = (): Player => (webMode() ? webOrLocal : local ?? unsupported);
 
   const item = (priority: number, command: string, label: string, text?: string) => {
     const i = vscode.window.createStatusBarItem(`earworm.${label}`, vscode.StatusBarAlignment.Left, priority);

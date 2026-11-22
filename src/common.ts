@@ -25,6 +25,11 @@ export class NotRunningError extends Error {
   constructor(message = 'Spotify is not running.') { super(message); }
 }
 
+/** The Web API cannot be used right now, but the Spotify app on this computer may still be. */
+export class WebApiUnavailableError extends Error {
+  constructor(message: string, readonly reason: 'quota' | 'rateLimit' | 'premium' | 'offline') { super(message); }
+}
+
 /** What every backend offers; extension.ts talks only to this. */
 export interface Player {
   getState(): Promise<PlayerState>;
@@ -36,4 +41,30 @@ export interface Player {
   getVolume(): Promise<number>;
   setVolume(volume: number): Promise<unknown>;
   open(): Promise<void>;
+}
+
+const PLAYER_METHODS = ['getState', 'playPause', 'next', 'previous', 'toggleShuffle', 'toggleRepeat', 'getVolume', 'setVolume', 'open'] as const;
+
+/**
+ * Runs each call on `web`; when the Web API cannot be used, runs it on `local` instead and tells
+ * `onFallback` why. If the local app is not running either, the Web API's reason is the error.
+ */
+export function withFallback(web: Player, local: Player, onFallback: (err: WebApiUnavailableError) => void): Player {
+  const wrap = (name: typeof PLAYER_METHODS[number]) => async (...args: unknown[]) => {
+    try {
+      return await (web[name] as (...a: unknown[]) => Promise<unknown>)(...args);
+    } catch (err) {
+      if (!(err instanceof WebApiUnavailableError)) throw err;
+      let result: unknown;
+      try {
+        result = await (local[name] as (...a: unknown[]) => Promise<unknown>)(...args);
+      } catch (localErr) {
+        throw localErr instanceof NotRunningError ? err : localErr;
+      }
+      if (name === 'getState' && (result as PlayerState).kind === 'notRunning') throw err;
+      onFallback(err);
+      return result;
+    }
+  };
+  return Object.fromEntries(PLAYER_METHODS.map(m => [m, wrap(m)])) as unknown as Player;
 }

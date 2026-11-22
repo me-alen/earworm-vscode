@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { challengeFor, createWebApi, parseAlbums, parseDevices, parsePlayback, parsePlaylists, parseSearch, parseSong, SignInRequiredError } from '../src/webapi';
-import { NotRunningError } from '../src/common';
+import { NotRunningError, WebApiUnavailableError } from '../src/common';
 
 const json = (status: number, body?: unknown, headers: Record<string, string> = {}) =>
   new Response(body === undefined ? null : JSON.stringify(body), { status, headers });
@@ -373,4 +373,21 @@ test('like and unlike the song playing now', async () => {
   s.player = undefined;
   assert.equal(await api.currentLiked(), undefined);
   await assert.rejects(api.toggleLike(), NotRunningError);
+});
+
+test('quota, Premium and network failures are marked so playback can fall back to local', async () => {
+  const { s, api } = await signedIn();
+  s.next = json(403, { error: { status: 403, message: 'Premium required', reason: 'PREMIUM_REQUIRED' } });
+  await assert.rejects(api.next(), (e: any) => e instanceof WebApiUnavailableError && e.reason === 'premium');
+  s.next = json(429, { error: { status: 429, message: 'Quota', reason: 'QUOTA_EXCEEDED' } });
+  await assert.rejects(api.next(), (e: any) => e instanceof WebApiUnavailableError && e.reason === 'quota');
+});
+
+test('an unreachable Spotify is marked offline', async () => {
+  const api = createWebApi({
+    clientId: () => 'x', open: async () => undefined, openUrl: async () => undefined,
+    store: { get: async () => JSON.stringify({ access: 'a', refresh: 'r', expiresAt: Date.now() + 3_600_000, clientId: 'x' }), store: async () => undefined, delete: async () => undefined },
+    fetch: (async () => { throw new TypeError('fetch failed'); }) as typeof fetch,
+  });
+  await assert.rejects(api.getState(), (e: any) => e instanceof WebApiUnavailableError && e.reason === 'offline' && /fetch failed/.test(e.message));
 });
