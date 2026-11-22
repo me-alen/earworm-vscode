@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NotRunningError, Player, PlayerState, progressText, WebApiUnavailableError, withFallback } from '../src/common';
+import { NotRunningError, Player, PlayerState, progressText, statusBarShown, WebApiUnavailableError, withFallback } from '../src/common';
 
 test('progress bar text', () => {
   assert.deepEqual(progressText(83, 225), { text: '1:23 ━━━━────── 3:45', label: '1:23 of 3:45' });
@@ -39,4 +39,14 @@ test('withFallback reports the Web API problem when the local app is not running
   await assert.rejects(p.next(), /Could not reach Spotify/);
   const q = withFallback(fakePlayer('web', [], offline), fakePlayer('local', [], undefined, { kind: 'notRunning' }), () => undefined);
   await assert.rejects(q.getState(), /Could not reach Spotify/);
+});
+
+test('status bar items: defaults, user choices, and the old showButtons setting', () => {
+  assert.deepEqual(statusBarShown(undefined, undefined), {
+    previous: true, playPause: true, next: true, nowPlaying: true, like: true, progress: true, progressWhenPaused: false,
+  });
+  assert.equal(statusBarShown({ nowPlaying: false }, undefined).nowPlaying, false);
+  const legacy = statusBarShown(undefined, false);
+  assert.deepEqual([legacy.previous, legacy.playPause, legacy.next, legacy.like, legacy.nowPlaying], [false, false, false, false, true]);
+  assert.equal(statusBarShown({ next: true }, false).next, true); // a new choice wins over the old setting
 });

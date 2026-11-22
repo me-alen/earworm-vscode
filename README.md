@@ -17,12 +17,16 @@ controls the Spotify desktop app directly, with no sign-in, so it works with Spo
 
 ## What works
 - Status bar: previous / play-pause / next buttons, the current track (click it to open Spotify)
-  and a progress bar (`1:23 ━━━━────── 3:45`). Right-click the status bar to hide any of them.
+  and a progress bar (`1:23 ━━━━────── 3:45`), hidden while paused unless you want it.
+- Choose what the status bar shows, and on which side: tick items in the **Status Bar** section of
+  the Earworm sidebar, run **Earworm: Customize Status Bar**, or set `earworm.statusBar.items` and
+  `earworm.statusBar.alignment`.
 - Commands (search "Earworm" in the command palette, bind any of them to keys): Play/Pause,
   Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify,
-  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify, Choose Spotify Device, Like/Unlike Current Song, Refresh Library
+  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify, Choose Spotify Device, Like/Unlike Current Song, Refresh Library, Customize Status Bar, Move Status Bar Items to the Other Side
 - Settings: `earworm.mode` (`local` or `webApi`), `earworm.clientId`, `earworm.refreshInterval`
-  (seconds, default 2; at least 5 in Web API mode), `earworm.showButtons`, `earworm.volumeStep`
+  (seconds, default 2; at least 5 in Web API mode), `earworm.statusBar.items`, `earworm.statusBar.alignment`,
+  `earworm.volumeStep`
 - Polling stops while the VS Code window is not focused
 
 The first time it runs, macOS asks whether VS Code may control Spotify. Allow it, or later

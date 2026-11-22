@@ -68,3 +68,28 @@ export function withFallback(web: Player, local: Player, onFallback: (err: WebAp
   };
   return Object.fromEntries(PLAYER_METHODS.map(m => [m, wrap(m)])) as unknown as Player;
 }
+
+/** The status bar items a user can show or hide, with the names the settings UI uses. */
+export const STATUS_BAR_ITEMS = {
+  previous: 'Previous button',
+  playPause: 'Play/Pause button',
+  next: 'Next button',
+  nowPlaying: 'Song name',
+  like: 'Like button (heart)',
+  progress: 'Progress bar',
+  progressWhenPaused: 'Progress bar while paused',
+} as const;
+export type StatusBarKey = keyof typeof STATUS_BAR_ITEMS;
+export type StatusBarShown = Record<StatusBarKey, boolean>;
+
+/**
+ * Which status bar items to show. `user` is what the user set in earworm.statusBar.items.
+ * The older earworm.showButtons: false still hides the buttons until the user sets them again.
+ */
+export function statusBarShown(user: Partial<StatusBarShown> | undefined, showButtons: boolean | undefined): StatusBarShown {
+  const buttons = showButtons !== false;
+  return {
+    previous: buttons, playPause: buttons, next: buttons, nowPlaying: true, like: buttons, progress: true, progressWhenPaused: false,
+    ...user,
+  };
+}

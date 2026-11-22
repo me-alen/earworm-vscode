@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 (2026-11-22)
+
+- Choose what Earworm shows in the status bar: previous, play/pause, next, song name, heart and progress bar, each on or off. Tick them in the new **Status Bar** section of the Earworm sidebar, run **Earworm: Customize Status Bar**, or use the `earworm.statusBar.items` setting.
+- Put Earworm on the left or right side of the status bar (`earworm.statusBar.alignment`).
+- The progress bar now hides while paused. Tick **Progress bar while paused** to keep it.
+- `earworm.showButtons` is replaced by `earworm.statusBar.items`. If you had turned the buttons off, they stay off.
+
 ## 0.4.3 (2026-11-22)
 
 - No changes to the extension. The first version published automatically to the VS Code Marketplace and Open VSX by GitHub Actions.

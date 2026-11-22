@@ -3,7 +3,7 @@
   "displayName": "Earworm",
   "description": "Control Spotify from VS Code: the desktop app on macOS, Linux and Windows with no sign-in, or any device plus search and your library through the Spotify Web API.",
   "icon": "images/icon.png",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "publisher": "alenfrancis",
   "author": {
     "name": "Alen Francis"
@@ -130,6 +130,18 @@
         "title": "Add to Queue",
         "category": "Earworm",
         "icon": "$(add)"
+      },
+      {
+        "command": "earworm.customizeStatusBar",
+        "title": "Customize Status Bar",
+        "category": "Earworm",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "earworm.toggleStatusBarSide",
+        "title": "Move Status Bar Items to the Other Side",
+        "category": "Earworm",
+        "icon": "$(arrow-swap)"
       }
     ],
     "viewsContainers": {
@@ -146,6 +158,11 @@
         {
           "id": "earworm.library",
           "name": "Library"
+        },
+        {
+          "id": "earworm.statusBar",
+          "name": "Status Bar",
+          "visibility": "collapsed"
         }
       ]
     },
@@ -182,6 +199,11 @@
           "command": "earworm.refreshLibrary",
           "when": "view == earworm.library && earworm.signedIn",
           "group": "navigation@3"
+        },
+        {
+          "command": "earworm.toggleStatusBarSide",
+          "when": "view == earworm.statusBar",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
@@ -234,10 +256,76 @@
           "minimum": 1,
           "description": "Seconds between now-playing updates. Updates pause while the window is not focused. In Web API mode the minimum is 5 seconds, since every update counts against your Spotify quota."
         },
+        "earworm.statusBar.items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "previous": {
+              "type": "boolean",
+              "default": true,
+              "description": "Previous track button"
+            },
+            "playPause": {
+              "type": "boolean",
+              "default": true,
+              "description": "Play/Pause button"
+            },
+            "next": {
+              "type": "boolean",
+              "default": true,
+              "description": "Next track button"
+            },
+            "nowPlaying": {
+              "type": "boolean",
+              "default": true,
+              "description": "Song name and artist. Problems such as a needed sign-in still show here."
+            },
+            "like": {
+              "type": "boolean",
+              "default": true,
+              "description": "Like button (heart). Shows only when signed in to the Spotify Web API."
+            },
+            "progress": {
+              "type": "boolean",
+              "default": true,
+              "description": "Progress bar with the time played and the song's length."
+            },
+            "progressWhenPaused": {
+              "type": "boolean",
+              "default": false,
+              "description": "Keep the progress bar while paused, to see where you stopped."
+            }
+          },
+          "default": {
+            "previous": true,
+            "playPause": true,
+            "next": true,
+            "nowPlaying": true,
+            "like": true,
+            "progress": true,
+            "progressWhenPaused": false
+          },
+          "markdownDescription": "Which Earworm items to show in the status bar. Also in the **Status Bar** section of the Earworm sidebar, and in **Earworm: Customize Status Bar**."
+        },
+        "earworm.statusBar.alignment": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "default": "left",
+          "enumDescriptions": [
+            "Left side, next to the branch and problem counts.",
+            "Right side, next to the language and notifications."
+          ],
+          "description": "Which side of the status bar Earworm's items sit on."
+        },
         "earworm.showButtons": {
           "type": "boolean",
           "default": true,
-          "description": "Show previous / play-pause / next buttons in the status bar."
+          "description": "Show previous / play-pause / next buttons in the status bar.",
+          "markdownDeprecationMessage": "Replaced by `#earworm.statusBar.items#`, which can show or hide each item.",
+          "deprecationMessage": "Replaced by earworm.statusBar.items, which can show or hide each item."
         },
         "earworm.volumeStep": {
           "type": "number",

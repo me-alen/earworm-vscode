@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { NotRunningError, Player, PlayerState, Progress, progressText, WebApiUnavailableError, withFallback } from './common';
+import { NotRunningError, Player, PlayerState, Progress, progressText, StatusBarShown, statusBarShown, WebApiUnavailableError, withFallback } from './common';
+import { customizeStatusBar, StatusBarView } from './statusbarSettings';
 import * as macos from './macos';
 import * as linux from './linux';
 import * as windows from './windows';
@@ -33,6 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
   });
 
   const library = new Library(web);
+  const statusBarView = new StatusBarView(() => shown());
   // Shows the sidebar's sign-in welcome instead of the tree when there are no tokens.
   let signedIn = false;
   const syncSignedIn = async () => {
@@ -55,51 +57,67 @@ export function activate(context: vscode.ExtensionContext) {
   }) : web;
   const player = (): Player => (webMode() ? webOrLocal : local ?? unsupported);
 
-  const item = (priority: number, command: string, label: string, text?: string) => {
-    const i = vscode.window.createStatusBarItem(`earworm.${label}`, vscode.StatusBarAlignment.Left, priority);
-    i.name = `Earworm: ${label}`;
-    i.command = command;
-    i.tooltip = label;
-    i.accessibilityInformation = { label };
-    if (text) i.text = text;
-    context.subscriptions.push(i);
-    return i;
+  // What the user chose to show (earworm.statusBar.items), read fresh on every render.
+  const shown = (): StatusBarShown => {
+    const i = config().inspect<Partial<StatusBarShown>>('statusBar.items');
+    return statusBarShown({ ...i?.globalValue, ...i?.workspaceValue }, config().get<boolean>('showButtons'));
   };
-  const prevItem = item(103, 'earworm.previous', 'Previous Track', '$(chevron-left)');
-  const playItem = item(102, 'earworm.playPause', 'Play/Pause');
-  const nextItem = item(101, 'earworm.next', 'Next Track', '$(chevron-right)');
-  const trackItem = item(100, 'earworm.openSpotify', 'Now Playing');
-  const likeItem = item(99.5, 'earworm.toggleLike', 'Like Song');
-  const progressItem = item(99, '', 'Playback Progress');
-  progressItem.command = undefined;
-  const buttons = [prevItem, playItem, nextItem];
+
+  // An item's side is fixed when it is created, so moving sides recreates them all.
+  // Higher priority sits further left on either side.
+  function createBar() {
+    const side = config().get('statusBar.alignment') === 'right' ? vscode.StatusBarAlignment.Right : vscode.StatusBarAlignment.Left;
+    const item = (priority: number, command: string | undefined, label: string, text?: string) => {
+      const i = vscode.window.createStatusBarItem(`earworm.${label}`, side, priority);
+      i.name = `Earworm: ${label}`;
+      i.command = command;
+      i.tooltip = label;
+      i.accessibilityInformation = { label };
+      if (text) i.text = text;
+      return i;
+    };
+    return {
+      prev: item(103, 'earworm.previous', 'Previous Track', '$(chevron-left)'),
+      play: item(102, 'earworm.playPause', 'Play/Pause'),
+      next: item(101, 'earworm.next', 'Next Track', '$(chevron-right)'),
+      track: item(100, 'earworm.openSpotify', 'Now Playing'),
+      like: item(99.5, 'earworm.toggleLike', 'Like Song'),
+      progress: item(99, undefined, 'Playback Progress'),
+    };
+  }
+  let bar = createBar();
+  context.subscriptions.push({ dispose: () => Object.values(bar).forEach(i => i.dispose()) });
+  const showIf = (i: vscode.StatusBarItem, visible: boolean) => (visible ? i.show() : i.hide());
 
   // Spotify reports the position only every few seconds, so count forward between reports.
   let progress: (Progress & { at: number; playing: boolean }) | undefined;
   function renderProgress() {
-    if (!progress) return progressItem.hide();
+    const s = shown();
+    if (!progress || !s.progress || (!progress.playing && !s.progressWhenPaused)) return bar.progress.hide();
     const elapsed = progress.playing ? (Date.now() - progress.at) / 1000 : 0;
     const { text, label } = progressText(Math.min(progress.duration, progress.position + elapsed), progress.duration);
-    progressItem.text = text;
-    progressItem.tooltip = label;
-    progressItem.accessibilityInformation = { label: `Played ${label}` };
-    progressItem.show();
+    bar.progress.text = text;
+    bar.progress.tooltip = label;
+    bar.progress.accessibilityInformation = { label: `Played ${label}` };
+    bar.progress.show();
   }
   const ticker = setInterval(() => { if (progress?.playing) renderProgress(); }, 1000);
 
   // The heart needs the Web API, so it shows only when signed in, in either mode. Spotify is asked
   // once per song, not on every poll.
   let likedFor: string | undefined;
-  function showLike(liked: boolean | undefined) {
-    likeItem.text = liked ? '$(heart-filled)' : '$(heart)';
-    likeItem.tooltip = liked ? 'Remove from Liked Songs' : 'Save to Liked Songs';
-    likeItem.accessibilityInformation = { label: likeItem.tooltip };
-    if (config().get('showButtons', true)) likeItem.show(); else likeItem.hide();
+  let liked: boolean | undefined;
+  function showLike(value: boolean | undefined) {
+    liked = value;
+    bar.like.text = liked ? '$(heart-filled)' : '$(heart)';
+    bar.like.tooltip = liked ? 'Remove from Liked Songs' : 'Save to Liked Songs';
+    bar.like.accessibilityInformation = { label: bar.like.tooltip };
+    showIf(bar.like, shown().like);
   }
   async function updateLike(state: PlayerState) {
-    if (!signedIn || state.kind !== 'running' || !state.track) { likedFor = undefined; likeItem.hide(); return; }
+    if (!signedIn || state.kind !== 'running' || !state.track) { likedFor = undefined; bar.like.hide(); return; }
     const key = `${state.track.name}\n${state.track.artist}`;
-    if (key === likedFor) return;
+    if (key === likedFor) return showLike(liked); // same song: only the user's show/hide choice may have changed
     likedFor = key;
     showLike((await web.currentLiked().catch(() => undefined))?.liked);
   }
@@ -107,41 +125,46 @@ export function activate(context: vscode.ExtensionContext) {
   let lastVolume: number | undefined; // volume before muting, restored on unmute
 
   function render(state: PlayerState) {
-    trackItem.show();
-    trackItem.command = 'earworm.openSpotify';
+    const s = shown();
+    const { prev, play, next, track } = bar;
+    showIf(track, s.nowPlaying);
+    track.command = 'earworm.openSpotify';
     void updateLike(state);
     progress = state.kind === 'running' && state.progress ? { ...state.progress, at: Date.now(), playing: state.playing } : undefined;
     renderProgress();
     if (state.kind === 'notRunning') {
-      buttons.forEach(b => b.hide());
-      trackItem.text = '$(music) Spotify';
-      trackItem.tooltip = webMode() ? 'No Spotify device is active. Click to open Spotify.' : 'Spotify is not running. Click to open it.';
-      trackItem.accessibilityInformation = { label: `${trackItem.tooltip}` };
+      [prev, play, next].forEach(b => b.hide());
+      track.text = '$(music) Spotify';
+      track.tooltip = webMode() ? 'No Spotify device is active. Click to open Spotify.' : 'Spotify is not running. Click to open it.';
+      track.accessibilityInformation = { label: `${track.tooltip}` };
       return;
     }
-    playItem.text = state.playing ? '$(debug-pause)' : '$(play)';
-    playItem.tooltip = state.playing ? 'Pause' : 'Play';
-    playItem.accessibilityInformation = { label: playItem.tooltip };
-    buttons.forEach(b => (config().get('showButtons', true) ? b.show() : b.hide()));
+    play.text = state.playing ? '$(debug-pause)' : '$(play)';
+    play.tooltip = state.playing ? 'Pause' : 'Play';
+    play.accessibilityInformation = { label: play.tooltip };
+    showIf(prev, s.previous);
+    showIf(play, s.playPause);
+    showIf(next, s.next);
     const t = state.track;
     const label = t ? `${t.name} — ${t.artist}` : 'Not playing';
-    trackItem.text = `$(music) ${label.length > 50 ? label.slice(0, 49) + '…' : label}`;
-    trackItem.tooltip = t ? `${t.name}\n${t.artist} — ${t.album}` : 'Nothing is playing';
-    trackItem.accessibilityInformation = { label: t ? `Now playing ${t.name} by ${t.artist}` : 'Nothing is playing' };
+    track.text = `$(music) ${label.length > 50 ? label.slice(0, 49) + '…' : label}`;
+    track.tooltip = t ? `${t.name}\n${t.artist} — ${t.album}` : 'Nothing is playing';
+    track.accessibilityInformation = { label: t ? `Now playing ${t.name} by ${t.artist}` : 'Nothing is playing' };
   }
 
+  // Shown even when the song name is hidden: it is how the user learns that something needs fixing.
   function renderError(err: unknown) {
-    buttons.forEach(b => b.hide());
+    const { prev, play, next, track } = bar;
+    [prev, play, next, bar.like].forEach(b => b.hide());
     progress = undefined;
     renderProgress();
-    likeItem.hide();
     likedFor = undefined;
     const signIn = err instanceof SignInRequiredError;
-    trackItem.text = signIn ? '$(account) Sign in to Spotify' : '$(warning) Spotify';
-    trackItem.command = signIn ? 'earworm.signIn' : 'earworm.openSpotify';
-    trackItem.tooltip = err instanceof Error ? err.message : String(err);
-    trackItem.accessibilityInformation = { label: `Earworm: ${trackItem.tooltip}` };
-    trackItem.show();
+    track.text = signIn ? '$(account) Sign in to Spotify' : '$(warning) Spotify';
+    track.command = signIn ? 'earworm.signIn' : 'earworm.openSpotify';
+    track.tooltip = err instanceof Error ? err.message : String(err);
+    track.accessibilityInformation = { label: `Earworm: ${track.tooltip}` };
+    track.show();
   }
 
   let busy = false;
@@ -266,6 +289,9 @@ export function activate(context: vscode.ExtensionContext) {
       await pickDevice(web);
     }),
     vscode.window.registerTreeDataProvider('earworm.library', library),
+    statusBarView.register(),
+    vscode.commands.registerCommand('earworm.customizeStatusBar', () => customizeStatusBar(shown())),
+    vscode.commands.registerCommand('earworm.toggleStatusBarSide', () => statusBarView.toggleSide()),
     vscode.commands.registerCommand('earworm.refreshLibrary', () => library.refresh()),
     command('playItem', async (n: Node) => {
       await web.play(n.item!);
@@ -285,7 +311,15 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.window.onDidChangeWindowState(s => { if (s.focused) void refresh(); }),
     vscode.workspace.onDidChangeConfiguration(e => {
-      if (e.affectsConfiguration('earworm')) { schedule(); void refresh(); }
+      if (!e.affectsConfiguration('earworm')) return;
+      if (e.affectsConfiguration('earworm.statusBar.alignment')) {
+        Object.values(bar).forEach(i => i.dispose());
+        bar = createBar();
+        likedFor = undefined; // the new heart has no icon yet
+      }
+      if (e.affectsConfiguration('earworm.statusBar') || e.affectsConfiguration('earworm.showButtons')) statusBarView.refresh();
+      schedule();
+      void refresh();
     }),
     { dispose: () => { clearInterval(timer); clearInterval(ticker); } },
   );
