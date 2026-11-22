@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 (2026-11-22)
+
+- Adds this changelog. No changes to the extension itself.
+
 ## 0.1.0 (2026-11-22)
 
 First release.
