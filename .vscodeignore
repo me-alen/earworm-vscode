@@ -8,3 +8,4 @@ ANALYSIS.md
 REQUIREMENTS.md
 .github/**
 .gitignore
+.env*
