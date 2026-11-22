@@ -97,6 +97,16 @@ npm run package   # builds earworm-<version>.vsix
 ```
 Press F5 in VS Code to open a window with the extension loaded.
 
+### Releasing
+1. Raise `version` in `package.json` (`npm version 0.5.0 --no-git-tag-version`) and add a
+   `## 0.5.0 (date)` section at the top of `CHANGELOG.md`.
+2. Commit, then push a matching tag: `git tag v0.5.0 && git push origin main v0.5.0`.
+
+The tag starts `.github/workflows/release.yml`. It runs the tests on Linux and Windows, then
+publishes to the VS Code Marketplace (Trusted Publishing, no token) and Open VSX (the `OVSX_PAT`
+repository secret), and attaches the `.vsix` to a GitHub release with that changelog section as
+notes. A tag that does not match `package.json` stops the release.
+
 ## Name
 The name has no "Spotify" in it because Spotify's branding guidelines do not allow it in a
 third-party product name.

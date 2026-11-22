@@ -1,0 +1,50 @@
+name: Release
+# Push a tag like v0.5.0 (matching "version" in package.json) to test, then publish to the
+# VS Code Marketplace and Open VSX, and attach the .vsix to a GitHub release.
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the GitHub release
+      id-token: write # Trusted Publishing: GitHub vouches for this job to the Marketplace, no token stored
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check the tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $version in package.json"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "VSIX=earworm-$version.vsix" >> "$GITHUB_ENV"
+      - run: npm run package
+      # --skip-duplicate makes a re-run safe after one of the two stores has already taken this version.
+      - name: Publish to the VS Code Marketplace
+        run: npx --yes @vscode/vsce publish --oidc --skip-duplicate --packagePath "$VSIX"
+      - name: Publish to Open VSX
+        run: npx --yes ovsx publish "$VSIX" --skip-duplicate
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      - name: Attach the .vsix to a GitHub release
+        run: |
+          # This version's section of CHANGELOG.md becomes the release notes.
+          awk -v v="$VERSION" '$0 ~ "^## " v " " {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" "$VSIX" --title "Earworm $VERSION" --notes-file notes.md \
+            || gh release upload "$GITHUB_REF_NAME" "$VSIX" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -1,5 +1,9 @@
 name: CI
-on: [push, pull_request]
+on:
+  push:
+    branches: ['**'] # tags run these tests through release.yml instead
+  pull_request:
+  workflow_call: # used by release.yml
 
 # A newer push to the same branch cancels the older run, to save minutes.
 concurrency:
