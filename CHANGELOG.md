@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0 (2026-11-22)
+
+- A progress bar in the status bar shows how far into the song you are, in local mode on macOS, Linux and Windows, and in Web API mode.
+
 ## 0.1.1 (2026-11-22)
 
 - Adds this changelog. No changes to the extension itself.

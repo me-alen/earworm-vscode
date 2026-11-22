@@ -37,3 +37,10 @@ test('helper replies', () => {
   assert.throws(() => parseReply('{"ok":false,"error":"Spotify has no audio stream right now."}'), /no audio stream/);
   assert.throws(() => parseReply('not json'), SyntaxError);
 });
+
+test('timeline becomes progress, kept within the track', () => {
+  const s = parseState({ session: true, status: 'Playing', title: 'T', artist: '', album: '', position: 230, duration: 225 });
+  assert.deepEqual(s.kind === 'running' && s.progress, { position: 225, duration: 225 });
+  const ad = parseState({ session: true, status: 'Playing', title: 'Ad', artist: '', album: '', position: 0, duration: 0 });
+  assert.equal(ad.kind === 'running' && ad.progress, undefined);
+});

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { NotRunningError, Player, PlayerState } from './common';
+import { NotRunningError, Player, PlayerState, Progress, progressText } from './common';
 import * as macos from './macos';
 import * as linux from './linux';
 import * as windows from './windows';
@@ -58,13 +58,30 @@ export function activate(context: vscode.ExtensionContext) {
   const playItem = item(102, 'earworm.playPause', 'Play/Pause');
   const nextItem = item(101, 'earworm.next', 'Next Track', '$(chevron-right)');
   const trackItem = item(100, 'earworm.openSpotify', 'Now Playing');
+  const progressItem = item(99, '', 'Playback Progress');
+  progressItem.command = undefined;
   const buttons = [prevItem, playItem, nextItem];
+
+  // Spotify reports the position only every few seconds, so count forward between reports.
+  let progress: (Progress & { at: number; playing: boolean }) | undefined;
+  function renderProgress() {
+    if (!progress) return progressItem.hide();
+    const elapsed = progress.playing ? (Date.now() - progress.at) / 1000 : 0;
+    const { text, label } = progressText(Math.min(progress.duration, progress.position + elapsed), progress.duration);
+    progressItem.text = text;
+    progressItem.tooltip = label;
+    progressItem.accessibilityInformation = { label: `Played ${label}` };
+    progressItem.show();
+  }
+  const ticker = setInterval(() => { if (progress?.playing) renderProgress(); }, 1000);
 
   let lastVolume: number | undefined; // volume before muting, restored on unmute
 
   function render(state: PlayerState) {
     trackItem.show();
     trackItem.command = 'earworm.openSpotify';
+    progress = state.kind === 'running' && state.progress ? { ...state.progress, at: Date.now(), playing: state.playing } : undefined;
+    renderProgress();
     if (state.kind === 'notRunning') {
       buttons.forEach(b => b.hide());
       trackItem.text = '$(music) Spotify';
@@ -85,6 +102,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   function renderError(err: unknown) {
     buttons.forEach(b => b.hide());
+    progress = undefined;
+    renderProgress();
     const signIn = err instanceof SignInRequiredError;
     trackItem.text = signIn ? '$(account) Sign in to Spotify' : '$(warning) Spotify';
     trackItem.command = signIn ? 'earworm.signIn' : 'earworm.openSpotify';
@@ -229,7 +248,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeConfiguration(e => {
       if (e.affectsConfiguration('earworm')) { schedule(); void refresh(); }
     }),
-    { dispose: () => clearInterval(timer) },
+    { dispose: () => { clearInterval(timer); clearInterval(ticker); } },
   );
 
   if (!local && !webMode() && !context.globalState.get('warnedPlatform')) {

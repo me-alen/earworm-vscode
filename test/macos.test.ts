@@ -9,13 +9,14 @@ test('not running', () => {
 });
 
 test('playing with a track', () => {
-  assert.deepEqual(parseState(['playing', 'Song, Pt. 2', 'Artist', 'Album'].join(S)), {
+  assert.deepEqual(parseState(['playing', 'Song, Pt. 2', 'Artist', 'Album', '225000', '42'].join(S)), {
     kind: 'running', playing: true, track: { name: 'Song, Pt. 2', artist: 'Artist', album: 'Album' },
+    progress: { position: 42, duration: 225 },
   });
 });
 
 test('track names keep newlines and tabs', () => {
-  const s = parseState(['paused', 'Line\nTwo\tTab', 'A', 'B'].join(S));
+  const s = parseState(['paused', 'Line\nTwo\tTab', 'A', 'B', '1000', '0'].join(S));
   assert.equal(s.kind === 'running' && s.track?.name, 'Line\nTwo\tTab');
   assert.equal(s.kind === 'running' && s.playing, false);
 });
@@ -36,4 +37,9 @@ test('rejects malformed output', () => {
   assert.throws(() => parseState(''));
   assert.throws(() => parseState('weird'));
   assert.throws(() => parseState(['playing', 'only name'].join(S)));
+});
+
+test('an ad or stream without a length has no progress', () => {
+  const s = parseState(['playing', 'Ad', '', '', '0', '3'].join(S));
+  assert.equal(s.kind === 'running' && s.progress, undefined);
 });

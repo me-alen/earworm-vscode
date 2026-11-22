@@ -4,7 +4,7 @@
 import { ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import * as path from 'node:path';
 import * as readline from 'node:readline';
-import { NotRunningError, PlayerState } from './common';
+import { NotRunningError, PlayerState, withProgress } from './common';
 
 const SCRIPT = path.join(__dirname, '../../scripts/windows-host.ps1');
 // Execution policy does not apply to a script block built from a string, so this runs even
@@ -62,7 +62,7 @@ function request(command: string): Promise<unknown> {
   return result;
 }
 
-interface RawState { session: boolean; process?: boolean; status?: string; title?: string; artist?: string; album?: string }
+interface RawState { session: boolean; process?: boolean; status?: string; title?: string; artist?: string; album?: string; position?: number; duration?: number }
 
 /** Turns the helper's `state` reply into a PlayerState. */
 export function parseState(raw: RawState): PlayerState {
@@ -75,6 +75,7 @@ export function parseState(raw: RawState): PlayerState {
       artist: raw.artist ?? '',
       album: raw.album ?? '',
     },
+    ...(raw.status !== 'Stopped' && raw.title ? withProgress(raw.position ?? NaN, raw.duration ?? 0) : {}),
   };
 }
 

@@ -48,3 +48,14 @@ test('finds the Spotify stream by app name or binary', () => {
   assert.equal(findSpotifyStream([list[0]]), undefined);
   assert.equal(findSpotifyStream([]), undefined);
 });
+
+test('position and length come in microseconds', () => {
+  const out = [
+    line({ type: 's', data: 'Playing' }),
+    meta({ 'xesam:title': { type: 's', data: 'T' }, 'mpris:length': { type: 't', data: 225_000_000 } }),
+    line({ type: 'x', data: 42_500_000 }),
+  ].join('\n');
+  assert.deepEqual(parseState(out), {
+    kind: 'running', playing: true, track: { name: 'T', artist: '', album: '' }, progress: { position: 42.5, duration: 225 },
+  });
+});

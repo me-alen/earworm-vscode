@@ -4,6 +4,7 @@
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 $null = [Windows.Media.Playback.MediaPlayer, Windows.Media.Playback, ContentType = WindowsRuntime]
+$null = [Windows.Media.SystemMediaTransportControlsTimelineProperties, Windows.Media, ContentType = WindowsRuntime]
 
 $global:tracks = @(
   @('Say "Hi"', 'Artist A, Artist B', 'Album One'),
@@ -28,6 +29,13 @@ function global:Show-Track {
   $u.MusicProperties.Artist = $t[1]
   $u.MusicProperties.AlbumTitle = $t[2]
   $u.Update()
+  $tl = New-Object Windows.Media.SystemMediaTransportControlsTimelineProperties
+  $tl.StartTime = [TimeSpan]::Zero
+  $tl.EndTime = [TimeSpan]::FromSeconds(225)
+  $tl.MinSeekTime = [TimeSpan]::Zero
+  $tl.MaxSeekTime = $tl.EndTime
+  $tl.Position = [TimeSpan]::FromSeconds(42)
+  $global:smtc.UpdateTimelineProperties($tl)
 }
 
 # Register-ObjectEvent cannot subscribe to WinRT events, and a script block handler would run

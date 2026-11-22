@@ -2,9 +2,24 @@
 
 export interface Track { name: string; artist: string; album: string }
 
+/** Seconds into the track, and its length. */
+export interface Progress { position: number; duration: number }
+
 export type PlayerState =
   | { kind: 'notRunning' }
-  | { kind: 'running'; playing: boolean; track?: Track };
+  | { kind: 'running'; playing: boolean; track?: Track; progress?: Progress };
+
+/** Spread into a running state. No length (ads, live streams) means no progress to show. */
+export const withProgress = (position: number, duration: number): { progress?: Progress } =>
+  duration > 0 && Number.isFinite(position) ? { progress: { position: Math.min(Math.max(position, 0), duration), duration } } : {};
+
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+/** The status bar's progress bar: "1:23 ━━━━────── 3:45". */
+export function progressText(position: number, duration: number, cells = 10) {
+  const done = Math.round((position / duration) * cells);
+  return { text: `${clock(position)} ${'━'.repeat(done)}${'─'.repeat(cells - done)} ${clock(duration)}`, label: `${clock(position)} of ${clock(duration)}` };
+}
 
 export class NotRunningError extends Error {
   constructor(message = 'Spotify is not running.') { super(message); }

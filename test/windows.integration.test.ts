@@ -39,6 +39,7 @@ test('Windows backend against a fake Spotify', { skip }, async t => {
   await waitFor(async () => trackName(await windows.getState()) !== undefined, 'the fake Spotify in media controls');
   assert.deepEqual(await windows.getState(), {
     kind: 'running', playing: false, track: { name: 'Say "Hi"', artist: 'Artist A, Artist B', album: 'Album One' },
+    progress: { position: 42, duration: 225 },
   });
 
   await windows.playPause();

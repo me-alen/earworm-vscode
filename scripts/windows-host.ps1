@@ -137,7 +137,14 @@ function Invoke-Earworm([string]$cmd, [string]$arg) {
       $s = Get-SpotifySession
       if (-not $s) { return @{ session = $false; process = (Test-SpotifyProcess) } }
       $p = Await ($s.TryGetMediaPropertiesAsync()) $propsType
-      return @{ session = $true; status = [string]$s.GetPlaybackInfo().PlaybackStatus; title = $p.Title; artist = $p.Artist; album = $p.AlbumTitle }
+      $status = [string]$s.GetPlaybackInfo().PlaybackStatus
+      $t = $s.GetTimelineProperties()
+      $position = $t.Position.TotalSeconds
+      # Spotify updates the timeline only now and then; add the time since, while playing.
+      # A never-set LastUpdatedTime is year 1601.
+      if ($status -eq 'Playing' -and $t.LastUpdatedTime.Year -gt 1601) { $position += ([DateTimeOffset]::Now - $t.LastUpdatedTime).TotalSeconds }
+      return @{ session = $true; status = $status; title = $p.Title; artist = $p.Artist; album = $p.AlbumTitle
+        position = $position; duration = ($t.EndTime - $t.StartTime).TotalSeconds }
     }
     'playPause' { $null = Await ((Require-Session).TryTogglePlayPauseAsync()) ([bool]) }
     'next' { $null = Await ((Require-Session).TrySkipNextAsync()) ([bool]) }

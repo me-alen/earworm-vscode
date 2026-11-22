@@ -29,6 +29,7 @@ test('Linux backend against a fake Spotify', { skip: !enabled && 'set EARWORM_LI
   await waitFor(async () => (await linux.getState()).kind === 'running', 'the fake Spotify on D-Bus');
   assert.deepEqual(await linux.getState(), {
     kind: 'running', playing: false, track: { name: 'Say "Hi"', artist: 'Artist A, Artist B', album: 'Album One' },
+    progress: { position: 42, duration: 225 },
   });
 
   await linux.playPause();

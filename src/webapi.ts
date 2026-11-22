@@ -6,7 +6,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import * as http from 'node:http';
 import { AddressInfo } from 'node:net';
-import { NotRunningError, Player, PlayerState } from './common';
+import { NotRunningError, Player, PlayerState, withProgress } from './common';
 
 const ACCOUNTS = 'https://accounts.spotify.com';
 const API = 'https://api.spotify.com/v1';
@@ -47,6 +47,7 @@ export function parsePlayback(p: any): PlayerState {
       artist: (item.artists ?? []).map((a: { name: string }) => a.name).join(', ') || item.show?.name || '',
       album: item.album?.name ?? item.show?.name ?? '',
     } : undefined,
+    ...(item ? withProgress(p.progress_ms / 1000, item.duration_ms / 1000) : {}),
   };
 }
 

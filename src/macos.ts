@@ -1,7 +1,7 @@
 // Controls the Spotify desktop app on macOS through its AppleScript dictionary.
 // Kept free of the `vscode` module so the parser can be unit-tested with plain Node.
 import { execFile } from 'node:child_process';
-import { NotRunningError, PlayerState } from './common';
+import { NotRunningError, PlayerState, withProgress } from './common';
 
 export class PermissionError extends Error {
   constructor() {
@@ -27,18 +27,21 @@ const STATE_SCRIPT = guarded(`set s to character id 31
     set out to (player state as string)
     if player state is not stopped then
       set t to current track
-      set out to out & s & (name of t) & s & (artist of t) & s & (album of t)
+      -- whole seconds: "as string" on a real uses the locale's decimal separator
+      set pos to player position
+      set out to out & s & (name of t) & s & (artist of t) & s & (album of t) & s & ((duration of t) as string) & s & ((round pos) as string)
     end if
     return out`);
 
 export function parseState(out: string): PlayerState {
   if (out === NOT_RUNNING) return { kind: 'notRunning' };
   const parts = out.split(SEP);
-  if (!['playing', 'paused', 'stopped'].includes(parts[0]) || (parts.length !== 1 && parts.length !== 4)) {
+  if (!['playing', 'paused', 'stopped'].includes(parts[0]) || (parts.length !== 1 && parts.length !== 6)) {
     throw new Error(`Unexpected reply from Spotify: ${JSON.stringify(out)}`);
   }
-  const [state, name, artist, album] = parts;
-  return { kind: 'running', playing: state === 'playing', track: name === undefined ? undefined : { name, artist, album } };
+  const [state, name, artist, album, durationMs, position] = parts;
+  if (name === undefined) return { kind: 'running', playing: state === 'playing', track: undefined };
+  return { kind: 'running', playing: state === 'playing', track: { name, artist, album }, ...withProgress(Number(position), Number(durationMs) / 1000) };
 }
 
 function osascript(script: string): Promise<string> {

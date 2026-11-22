@@ -3,7 +3,7 @@
 // to parse (`dbus-send` prints strings unescaped). Spotify's Linux app ignores MPRIS volume,
 // so volume goes through `pactl`, which works on both PulseAudio and PipeWire.
 import { execFile, spawn } from 'node:child_process';
-import { NotRunningError, PlayerState } from './common';
+import { NotRunningError, PlayerState, withProgress } from './common';
 
 const DEST = 'org.mpris.MediaPlayer2.spotify';
 const PATH = '/org/mpris/MediaPlayer2';
@@ -43,29 +43,27 @@ async function mpris<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-/** Parses `busctl --json=short get-property … PlaybackStatus Metadata`: one JSON value per line. */
+/** Parses `busctl --json=short get-property … PlaybackStatus Metadata Position`: one JSON value per line. Times are in µs. */
 export function parseState(out: string): PlayerState {
-  const [status, meta] = out.trim().split('\n').map(line => JSON.parse(line));
+  const [status, meta, position] = out.trim().split('\n').map(line => JSON.parse(line));
   const s = status?.data;
   if (!['Playing', 'Paused', 'Stopped'].includes(s) || meta?.type !== 'a{sv}') {
     throw new Error(`Unexpected reply from Spotify: ${JSON.stringify(out)}`);
   }
   const m = meta.data;
   const name: string | undefined = m['xesam:title']?.data;
+  if (s === 'Stopped' || !name) return { kind: 'running', playing: s === 'Playing', track: undefined };
   return {
     kind: 'running',
     playing: s === 'Playing',
-    track: s === 'Stopped' || !name ? undefined : {
-      name,
-      artist: (m['xesam:artist']?.data ?? []).join(', '),
-      album: m['xesam:album']?.data ?? '',
-    },
+    track: { name, artist: (m['xesam:artist']?.data ?? []).join(', '), album: m['xesam:album']?.data ?? '' },
+    ...withProgress(Number(position?.data) / 1e6, Number(m['mpris:length']?.data) / 1e6),
   };
 }
 
 export async function getState(): Promise<PlayerState> {
   try {
-    return parseState(await busctl('get-property', DEST, PATH, IFACE, 'PlaybackStatus', 'Metadata'));
+    return parseState(await busctl('get-property', DEST, PATH, IFACE, 'PlaybackStatus', 'Metadata', 'Position'));
   } catch (err) {
     if (!(await isRunning())) return { kind: 'notRunning' };
     throw err;

@@ -10,12 +10,14 @@ controls the Spotify desktop app directly, with no sign-in, so it works with Spo
 |---|---|---|---|
 | How | AppleScript (`osascript`) | MPRIS over D-Bus (`busctl`), volume through `pactl` | Windows media controls (SMTC), volume through the per-app volume mixer, both from one Windows PowerShell helper |
 | Play/pause, next, previous, now playing | ✅ | ✅ | ✅ once Spotify has played something since it opened |
+| Progress bar | ✅ | ✅ if Spotify reports its position over MPRIS | ✅ |
 | Volume, mute | ✅ | ✅ while Spotify has an audio stream (start playback first) | ✅ while Spotify has an audio stream; changes Spotify's slider in the volume mixer |
 | Shuffle, repeat | ✅ | ⚠️ Spotify's Linux app has long ignored these from other apps; Earworm tries, then tells you if it didn't take | ⚠️ Earworm asks Windows; if Spotify refuses, it tells you |
 | Needs | nothing extra | `busctl` (systemd) and `pactl` (PulseAudio or PipeWire) | nothing extra (Windows PowerShell ships with Windows) |
 
 ## What works
-- Status bar: previous / play-pause / next buttons and the current track (click it to open Spotify)
+- Status bar: previous / play-pause / next buttons, the current track (click it to open Spotify)
+  and a progress bar (`1:23 ━━━━────── 3:45`). Right-click the status bar to hide any of them.
 - Commands (search "Earworm" in the command palette, bind any of them to keys): Play/Pause,
   Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify,
   Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify, Choose Spotify Device, Refresh Library

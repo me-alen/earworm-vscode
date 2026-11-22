@@ -125,6 +125,8 @@ test('parsePlayback', () => {
     kind: 'running', playing: true, track: { name: 'Say "Hi"', artist: 'Artist A, Artist B', album: 'Album One' },
   });
   assert.deepEqual(parsePlayback({ device: {}, is_playing: true, item: null }), { kind: 'running', playing: true, track: undefined });
+  const withTime = parsePlayback({ ...PLAYING, progress_ms: 42_000, item: { ...PLAYING.item, duration_ms: 225_000 } });
+  assert.deepEqual(withTime.kind === 'running' && withTime.progress, { position: 42, duration: 225 });
   assert.deepEqual(
     parsePlayback({ device: {}, is_playing: false, item: { name: 'Ep 1', show: { name: 'A Podcast' } } }),
     { kind: 'running', playing: false, track: { name: 'Ep 1', artist: 'A Podcast', album: 'A Podcast' } },
