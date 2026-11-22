@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A new icon: a worm in headphones, its body shaped like a sound wave.
+
 ## 0.5.0 (2026-11-22)
 
 - Choose what Earworm shows in the status bar: previous, play/pause, next, song name, heart and progress bar, each on or off. Tick them in the new **Status Bar** section of the Earworm sidebar, run **Earworm: Customize Status Bar**, or use the `earworm.statusBar.items` setting.
