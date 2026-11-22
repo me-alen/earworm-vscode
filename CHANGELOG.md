@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 (2026-11-22)
+
+- Like or unlike the song playing now: a heart in the status bar, or **Earworm: Like/Unlike Current Song**. Needs Web API sign-in and works in either mode. If you signed in before, Earworm asks you to sign in once more to allow saving songs.
+
 ## 0.2.0 (2026-11-22)
 
 - A progress bar in the status bar shows how far into the song you are, in local mode on macOS, Linux and Windows, and in Web API mode.

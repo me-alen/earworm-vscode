@@ -12,7 +12,7 @@ const ACCOUNTS = 'https://accounts.spotify.com';
 const API = 'https://api.spotify.com/v1';
 // Changing these makes existing users sign in again (a 403 "Insufficient client scope" asks them to).
 const SCOPES = 'user-read-playback-state user-modify-playback-state user-read-currently-playing user-read-recently-played '
-  + 'user-library-read playlist-read-private playlist-read-collaborative';
+  + 'user-library-read user-library-modify playlist-read-private playlist-read-collaborative';
 const CALLBACK = '/callback';
 /** What the user registers in the Spotify dashboard. Spotify lets loopback URIs take any port at sign-in. */
 export const REDIRECT_URI = `http://127.0.0.1${CALLBACK}`;
@@ -149,6 +149,10 @@ export interface WebApi extends Player {
   playlists(): Promise<Playlist[]>;
   playlistSongs(p: Playlist): Promise<SearchItem[]>;
   albums(): Promise<Album[]>;
+  /** Whether the song playing now is in Liked Songs; undefined when nothing is playing. */
+  currentLiked(): Promise<{ uri: string; liked: boolean } | undefined>;
+  /** Likes or unlikes the song playing now and returns its new state. */
+  toggleLike(): Promise<{ name: string; liked: boolean }>;
 }
 
 export function createWebApi(d: Deps): WebApi {
@@ -280,6 +284,12 @@ export function createWebApi(d: Deps): WebApi {
   }
 
   const playback = () => api('GET', '/me/player?additional_types=episode');
+  async function currentLiked() {
+    const item = (await playback())?.item;
+    if (!item?.uri || item.is_local) return undefined; // local files cannot be liked through the API
+    const [liked] = await api('GET', `/me/library/contains?uris=${encodeURIComponent(item.uri)}`);
+    return { uri: item.uri as string, name: item.name as string, liked: !!liked };
+  }
   async function active() {
     const p = await playback();
     if (!p?.device) throw new NotRunningError(NO_DEVICE);
@@ -369,6 +379,16 @@ export function createWebApi(d: Deps): WebApi {
     playlistSongs: async (p: Playlist) =>
       songs(list(await api('GET', `/playlists/${encodeURIComponent(p.id)}/items?limit=50`)).map(x => x.item ?? x.track), p.uri),
     albums: async () => parseAlbums(await api('GET', '/me/albums?limit=50')),
+    async currentLiked() {
+      const c = await currentLiked();
+      return c && { uri: c.uri, liked: c.liked };
+    },
+    async toggleLike() {
+      const c = await currentLiked();
+      if (!c) throw new NotRunningError('Nothing is playing on Spotify right now, so there is no song to like.');
+      await api(c.liked ? 'DELETE' : 'PUT', `/me/library?uris=${encodeURIComponent(c.uri)}`);
+      return { name: c.name, liked: !c.liked };
+    },
 
     getState: async () => parsePlayback(await playback()),
     playPause: async () => api('PUT', (await active()).is_playing ? '/me/player/pause' : '/me/player/play'),

@@ -20,7 +20,7 @@ controls the Spotify desktop app directly, with no sign-in, so it works with Spo
   and a progress bar (`1:23 ━━━━────── 3:45`). Right-click the status bar to hide any of them.
 - Commands (search "Earworm" in the command palette, bind any of them to keys): Play/Pause,
   Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify,
-  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify, Choose Spotify Device, Refresh Library
+  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify, Choose Spotify Device, Like/Unlike Current Song, Refresh Library
 - Settings: `earworm.mode` (`local` or `webApi`), `earworm.clientId`, `earworm.refreshInterval`
   (seconds, default 2; at least 5 in Web API mode), `earworm.showButtons`, `earworm.volumeStep`
 - Polling stops while the VS Code window is not focused
@@ -60,6 +60,11 @@ playlist, album or liked songs; the **+** button queues it. The ▶ button plays
 album. Each list loads when you open it and shows its first 50 entries. Spotify only lists the songs of
 playlists you own or collaborate on; other playlists can still be played. If you signed in before
 the library existed, Earworm asks you to sign in once more to allow the extra permissions.
+
+**Like/unlike** (needs Web API sign-in, works in either mode): once you are signed in, a heart
+next to the song in the status bar shows whether it is in your Liked Songs. Click it, or run
+**Earworm: Like/Unlike Current Song**, to add or remove it. If you signed in before this
+existed, Earworm asks you to sign in once more.
 
 ## Develop
 ```bash

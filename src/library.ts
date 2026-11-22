@@ -26,6 +26,7 @@ export class Library implements vscode.TreeDataProvider<Node> {
   private readonly changed = new vscode.EventEmitter<Node | undefined>();
   readonly onDidChangeTreeData = this.changed.event;
   private readonly queue: Node;
+  private readonly liked: Node;
   private readonly roots: Node[];
 
   constructor(web: WebApi) {
@@ -40,10 +41,11 @@ export class Library implements vscode.TreeDataProvider<Node> {
         ], 'Nothing is queued');
       },
     };
+    this.liked = { label: 'Liked Songs', icon: 'heart', children: async () => empty((await web.likedSongs()).map(s => song(s)), 'No liked songs') };
     this.roots = [
       this.queue,
       { label: 'Recently Played', icon: 'history', children: async () => empty((await web.recentlyPlayed()).map(s => song(s)), 'Nothing played yet') },
-      { label: 'Liked Songs', icon: 'heart', children: async () => empty((await web.likedSongs()).map(s => song(s)), 'No liked songs') },
+      this.liked,
       {
         label: 'Playlists', icon: 'list-unordered',
         children: async () => empty((await web.playlists()).map(p => ({
@@ -67,6 +69,7 @@ export class Library implements vscode.TreeDataProvider<Node> {
 
   refresh() { this.changed.fire(undefined); }
   refreshQueue() { this.changed.fire(this.queue); }
+  refreshLiked() { this.changed.fire(this.liked); }
 
   getTreeItem(n: Node): vscode.TreeItem {
     const t = new vscode.TreeItem(n.label, n.children ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);

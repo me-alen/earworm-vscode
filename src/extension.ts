@@ -34,8 +34,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   const library = new Library(web);
   // Shows the sidebar's sign-in welcome instead of the tree when there are no tokens.
+  let signedIn = false;
   const syncSignedIn = async () => {
-    await vscode.commands.executeCommand('setContext', 'earworm.signedIn', await web.signedIn());
+    signedIn = await web.signedIn();
+    likedFor = undefined; // check the heart again: the account or its permissions may have changed
+    await vscode.commands.executeCommand('setContext', 'earworm.signedIn', signedIn);
     library.refresh();
   };
 
@@ -58,6 +61,7 @@ export function activate(context: vscode.ExtensionContext) {
   const playItem = item(102, 'earworm.playPause', 'Play/Pause');
   const nextItem = item(101, 'earworm.next', 'Next Track', '$(chevron-right)');
   const trackItem = item(100, 'earworm.openSpotify', 'Now Playing');
+  const likeItem = item(99.5, 'earworm.toggleLike', 'Like Song');
   const progressItem = item(99, '', 'Playback Progress');
   progressItem.command = undefined;
   const buttons = [prevItem, playItem, nextItem];
@@ -75,11 +79,29 @@ export function activate(context: vscode.ExtensionContext) {
   }
   const ticker = setInterval(() => { if (progress?.playing) renderProgress(); }, 1000);
 
+  // The heart needs the Web API, so it shows only when signed in, in either mode. Spotify is asked
+  // once per song, not on every poll.
+  let likedFor: string | undefined;
+  function showLike(liked: boolean | undefined) {
+    likeItem.text = liked ? '$(heart-filled)' : '$(heart)';
+    likeItem.tooltip = liked ? 'Remove from Liked Songs' : 'Save to Liked Songs';
+    likeItem.accessibilityInformation = { label: likeItem.tooltip };
+    if (config().get('showButtons', true)) likeItem.show(); else likeItem.hide();
+  }
+  async function updateLike(state: PlayerState) {
+    if (!signedIn || state.kind !== 'running' || !state.track) { likedFor = undefined; likeItem.hide(); return; }
+    const key = `${state.track.name}\n${state.track.artist}`;
+    if (key === likedFor) return;
+    likedFor = key;
+    showLike((await web.currentLiked().catch(() => undefined))?.liked);
+  }
+
   let lastVolume: number | undefined; // volume before muting, restored on unmute
 
   function render(state: PlayerState) {
     trackItem.show();
     trackItem.command = 'earworm.openSpotify';
+    void updateLike(state);
     progress = state.kind === 'running' && state.progress ? { ...state.progress, at: Date.now(), playing: state.playing } : undefined;
     renderProgress();
     if (state.kind === 'notRunning') {
@@ -104,6 +126,8 @@ export function activate(context: vscode.ExtensionContext) {
     buttons.forEach(b => b.hide());
     progress = undefined;
     renderProgress();
+    likeItem.hide();
+    likedFor = undefined;
     const signIn = err instanceof SignInRequiredError;
     trackItem.text = signIn ? '$(account) Sign in to Spotify' : '$(warning) Spotify';
     trackItem.command = signIn ? 'earworm.signIn' : 'earworm.openSpotify';
@@ -238,6 +262,13 @@ export function activate(context: vscode.ExtensionContext) {
     command('playItem', async (n: Node) => {
       await web.play(n.item!);
       setTimeout(() => library.refreshQueue(), 1000);
+    }),
+    command('toggleLike', async () => {
+      await requireSignIn('Liking songs');
+      const { name, liked } = await web.toggleLike();
+      showLike(liked);
+      vscode.window.setStatusBarMessage(liked ? `$(heart-filled) Added "${name}" to Liked Songs` : `Removed "${name}" from Liked Songs`, 4000);
+      library.refreshLiked();
     }),
     command('queueItem', async (n: Node) => {
       await web.addToQueue(n.item!);

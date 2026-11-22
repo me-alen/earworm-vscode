@@ -55,6 +55,7 @@ function fake(browser?: (redirect: string, state: string) => string) {
     revoked: false,
     player: PLAYING as any,
     devices: [] as { id: string; is_restricted?: boolean }[],
+    liked: new Set<string>(),
     next: undefined as Response | undefined, // one-off reply for the next API call
   };
   const fetchFake = (async (input: string | URL | Request, init?: RequestInit) => {
@@ -79,6 +80,12 @@ function fake(browser?: (redirect: string, state: string) => string) {
     if (url.pathname === '/v1/me/player/devices') return json(200, { devices: s.devices });
     if (url.pathname === '/v1/search') return json(200, SEARCH);
     if (url.pathname in LIBRARY) return json(200, LIBRARY[url.pathname]);
+    if (url.pathname === '/v1/me/library/contains') return json(200, [s.liked.has(url.searchParams.get('uris')!)]);
+    if (url.pathname === '/v1/me/library') {
+      const uri = url.searchParams.get('uris')!;
+      if (init?.method === 'PUT') s.liked.add(uri); else s.liked.delete(uri);
+      return json(200);
+    }
     if (init?.method === 'GET') return s.player ? json(200, s.player) : json(204);
     return json(204);
   }) as typeof fetch;
@@ -93,7 +100,10 @@ function fake(browser?: (redirect: string, state: string) => string) {
     openUrl: async url => {
       const q = new URL(url).searchParams;
       assert.equal(q.get('code_challenge_method'), 'S256');
-      assert.match(q.get('scope')!, /^user-read-playback-state user-modify-playback-state .*user-library-read playlist-read-private/);
+      const scopes = q.get('scope')!.split(' ');
+      for (const needed of ['user-read-playback-state', 'user-modify-playback-state', 'user-library-read', 'user-library-modify', 'playlist-read-private']) {
+        assert.ok(scopes.includes(needed), needed);
+      }
       assert.match(q.get('redirect_uri')!, /^http:\/\/127\.0\.0\.1:\d+\/callback$/);
       assert.doesNotMatch(url, /\+/); // spaces as %20
       s.challenge = q.get('code_challenge')!;
@@ -343,4 +353,24 @@ test('a token from before the library scopes asks the user to sign in again', as
   const { s, api } = await signedIn();
   s.next = json(403, { error: { status: 403, message: 'Insufficient client scope' } });
   await assert.rejects(api.likedSongs(), SignInRequiredError);
+});
+
+test('like and unlike the song playing now', async () => {
+  const { s, api } = await signedIn();
+  s.player = { ...PLAYING, item: { ...PLAYING.item, uri: 'spotify:track:t1' } };
+  assert.deepEqual(await api.currentLiked(), { uri: 'spotify:track:t1', liked: false });
+  assert.deepEqual(await api.toggleLike(), { name: 'Say "Hi"', liked: true });
+  assert.deepEqual(await api.currentLiked(), { uri: 'spotify:track:t1', liked: true });
+  assert.deepEqual(await api.toggleLike(), { name: 'Say "Hi"', liked: false });
+  assert.deepEqual(s.calls.filter(c => c.includes('/me/library')), [
+    'GET /me/library/contains?uris=spotify%3Atrack%3At1 Bearer access-1',
+    'GET /me/library/contains?uris=spotify%3Atrack%3At1 Bearer access-1',
+    'PUT /me/library?uris=spotify%3Atrack%3At1 Bearer access-1',
+    'GET /me/library/contains?uris=spotify%3Atrack%3At1 Bearer access-1',
+    'GET /me/library/contains?uris=spotify%3Atrack%3At1 Bearer access-1',
+    'DELETE /me/library?uris=spotify%3Atrack%3At1 Bearer access-1',
+  ]);
+  s.player = undefined;
+  assert.equal(await api.currentLiked(), undefined);
+  await assert.rejects(api.toggleLike(), NotRunningError);
 });
