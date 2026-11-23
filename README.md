@@ -38,7 +38,9 @@ the Spotify Web API, and also works on operating systems without local control. 
 **Spotify Premium** and your **own Spotify developer app**: since 2026 Spotify allows only 5 users
 per app, so Earworm cannot ship a shared one.
 
-Run **Earworm: Set Up Spotify Web API** and follow the steps:
+The **Get Started with Earworm** walkthrough takes you through it one step at a time. VS Code
+opens it when you install Earworm; to open it later, run **Welcome: Open Walkthrough…**. Or run
+**Earworm: Set Up Spotify Web API** and follow the steps:
 1. In the [Spotify dashboard](https://developer.spotify.com/dashboard), create an app and tick "Web API".
 2. Add the redirect URI `http://127.0.0.1:43117/callback` (Earworm copies it for you) and click
    **Add**. Earworm listens on that port only while you sign in.

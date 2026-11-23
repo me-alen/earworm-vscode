@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- A **Get Started with Earworm** walkthrough: play from the Spotify app, choose what the status bar shows, then optionally create your Spotify app, sign in and open your library, one step at a time. VS Code opens it when you install Earworm, and the Library sidebar links to it.
+
 ## 0.5.0 (2026-11-22)
 
 - Choose what Earworm shows in the status bar: previous, play/pause, next, song name, heart and progress bar, each on or off. Tick them in the new **Status Bar** section of the Earworm sidebar, run **Earworm: Customize Status Bar**, or use the `earworm.statusBar.items` setting.
