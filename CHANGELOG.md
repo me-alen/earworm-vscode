@@ -3,6 +3,7 @@
 ## Unreleased
 
 - A **Get Started with Earworm** walkthrough: play from the Spotify app, choose what the status bar shows, then optionally create your Spotify app, sign in and open your library, one step at a time. VS Code opens it when you install Earworm, and the Library sidebar links to it.
+- The icon is redrawn: the same equalizer, a little sharper.
 
 ## 0.5.0 (2026-11-22)
 
