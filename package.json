@@ -3,7 +3,7 @@
   "displayName": "Earworm",
   "description": "Control Spotify from VS Code: the desktop app on macOS, Linux and Windows with no sign-in, or any device plus search and your library through the Spotify Web API.",
   "icon": "images/icon.png",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "alenfrancis",
   "author": {
     "name": "Alen Francis"
@@ -193,36 +193,58 @@
             "id": "local",
             "title": "Play from the Spotify app",
             "description": "Earworm already works with the Spotify app on this computer: no sign-in, and Spotify Free is fine. Start a song in Spotify and it shows in the status bar.\n[Play/Pause](command:earworm.playPause)",
-            "media": { "markdown": "walkthrough/local.md" },
-            "completionEvents": ["onCommand:earworm.playPause"]
+            "media": {
+              "markdown": "walkthrough/local.md"
+            },
+            "completionEvents": [
+              "onCommand:earworm.playPause"
+            ]
           },
           {
             "id": "statusBar",
             "title": "Choose what the status bar shows",
             "description": "Tick the buttons, song name, heart and progress bar you want, and pick a side.\n[Customize Status Bar](command:earworm.customizeStatusBar)",
-            "media": { "markdown": "walkthrough/status-bar.md" },
-            "completionEvents": ["onCommand:earworm.customizeStatusBar", "onView:earworm.statusBar"]
+            "media": {
+              "markdown": "walkthrough/status-bar.md"
+            },
+            "completionEvents": [
+              "onCommand:earworm.customizeStatusBar",
+              "onView:earworm.statusBar"
+            ]
           },
           {
             "id": "createApp",
             "title": "Optional: create your Spotify app",
             "description": "For Spotify on any device, search and your library, Earworm uses the Spotify Web API. It needs Spotify Premium and your own free developer app. This button copies the redirect URI, then opens the dashboard.\n[Open Spotify Dashboard](command:earworm.openDashboard)",
-            "media": { "markdown": "walkthrough/create-app.md" },
-            "completionEvents": ["onCommand:earworm.openDashboard", "onContext:earworm.signedIn"]
+            "media": {
+              "markdown": "walkthrough/create-app.md"
+            },
+            "completionEvents": [
+              "onCommand:earworm.openDashboard",
+              "onContext:earworm.signedIn"
+            ]
           },
           {
             "id": "signIn",
             "title": "Paste your Client ID and sign in",
             "description": "Copy the Client ID from your app's page, paste it here, then approve the sign-in in your browser.\n[Paste Client ID](command:earworm.enterClientId)",
-            "media": { "markdown": "walkthrough/sign-in.md" },
-            "completionEvents": ["onContext:earworm.signedIn"]
+            "media": {
+              "markdown": "walkthrough/sign-in.md"
+            },
+            "completionEvents": [
+              "onContext:earworm.signedIn"
+            ]
           },
           {
             "id": "library",
             "title": "Browse your library",
             "description": "Your queue, recently played, liked songs, playlists and albums are in the Earworm sidebar, with search and device switching at the top.\n[Open the Library](command:earworm.library.focus)",
-            "media": { "markdown": "walkthrough/library.md" },
-            "completionEvents": ["onView:earworm.library"]
+            "media": {
+              "markdown": "walkthrough/library.md"
+            },
+            "completionEvents": [
+              "onView:earworm.library"
+            ]
           }
         ]
       }
