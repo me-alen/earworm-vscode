@@ -93,3 +93,22 @@ export function statusBarShown(user: Partial<StatusBarShown> | undefined, showBu
     ...user,
   };
 }
+
+/** The GitHub feedback form, with the facts that help read the feedback already filled in. */
+export function feedbackUrl(fields: { earworm: string; editor: string; os: string; mode: string }) {
+  const query = Object.entries({ template: 'feedback.yml', ...fields })
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&'); // %20, not URLSearchParams' +, survives vscode.Uri
+  return `https://github.com/me-alen/earworm-vscode/issues/new?${query}`;
+}
+
+/** VS Code installs from the Marketplace; Cursor, VSCodium, Windsurf and others from Open VSX. */
+export const reviewUrl = (uriScheme: string) => (uriScheme === 'vscode' || uriScheme === 'vscode-insiders'
+  ? 'https://marketplace.visualstudio.com/items?itemName=alenfrancis.earworm&ssr=false#review-details'
+  : 'https://open-vsx.org/extension/alenfrancis/earworm/reviews');
+
+/** Songs played since the first one, for the single "Enjoying Earworm?" note. */
+export interface FeedbackAsk { firstSong: number; songs: number; asked: boolean }
+
+/** Ask once ever, and only after two weeks and ten songs of real use. */
+export const shouldAskFeedback = (s: FeedbackAsk, now: number) =>
+  !s.asked && s.songs >= 10 && now - s.firstSong >= 14 * 24 * 60 * 60 * 1000;

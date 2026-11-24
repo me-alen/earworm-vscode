@@ -23,7 +23,7 @@ controls the Spotify desktop app directly, with no sign-in, so it works with Spo
   `earworm.statusBar.alignment`.
 - Commands (search "Earworm" in the command palette, bind any of them to keys): Play/Pause,
   Next, Previous, Volume Up/Down, Mute/Unmute, Toggle Shuffle, Toggle Repeat, Open Spotify,
-  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify, Choose Spotify Device, Like/Unlike Current Song, Refresh Library, Customize Status Bar, Move Status Bar Items to the Other Side
+  Set Up Spotify Web API, Sign In to Spotify, Sign Out of Spotify, Search Spotify, Choose Spotify Device, Like/Unlike Current Song, Refresh Library, Customize Status Bar, Move Status Bar Items to the Other Side, Send Feedback
 - Settings: `earworm.mode` (`local` or `webApi`), `earworm.clientId`, `earworm.refreshInterval`
   (seconds, default 2; at least 5 in Web API mode), `earworm.statusBar.items`, `earworm.statusBar.alignment`,
   `earworm.volumeStep`
@@ -77,6 +77,13 @@ next to the song in the status bar shows whether it is in your Liked Songs. Clic
 **Earworm: Like/Unlike Current Song**, to add or remove it. If you signed in before this
 existed, Earworm asks you to sign in once more.
 
+## Feedback
+Tell us what works, what's missing, or what gets in the way: run **Earworm: Send Feedback**, or
+[open a feedback or bug form](https://github.com/me-alen/earworm-vscode/issues/new/choose).
+If Earworm helps you, a rating on the
+[VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=alenfrancis.earworm&ssr=false#review-details)
+or [Open VSX](https://open-vsx.org/extension/alenfrancis/earworm/reviews) helps others find it.
+
 ## Privacy
 Earworm has no servers, no analytics and no telemetry. It collects nothing about you.
 
@@ -87,6 +94,11 @@ Earworm has no servers, no analytics and no telemetry. It collects nothing about
   queue, recently played songs, liked songs, playlists and saved albums, and save or remove liked songs.
   It uses what Spotify returns only to show it to you in VS Code, and keeps nothing on disk
   except its sign-in tokens.
+- **Feedback** is never sent on its own. Earworm counts how many songs it has seen, in VS Code's
+  storage on your computer, only to decide when to ask once (after two weeks and ten songs) whether
+  you'd like to rate it or send feedback. **Earworm: Send Feedback** opens a GitHub form in your
+  browser with your Earworm version, editor, OS and mode filled in; nothing is sent unless you
+  submit it, and you can edit or clear any of it first.
 - **Sign-in tokens** are kept in VS Code's secret storage (your OS keychain), never in settings
   or files. Your Spotify password never passes through Earworm.
 - **To disconnect**, run **Earworm: Sign Out of Spotify**, which deletes the tokens, and remove

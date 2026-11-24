@@ -1,5 +1,8 @@
 import * as vscode from 'vscode';
-import { NotRunningError, Player, PlayerState, Progress, progressText, StatusBarShown, statusBarShown, WebApiUnavailableError, withFallback } from './common';
+import {
+  FeedbackAsk, feedbackUrl, NotRunningError, Player, PlayerState, Progress, progressText, reviewUrl, shouldAskFeedback,
+  StatusBarShown, statusBarShown, WebApiUnavailableError, withFallback,
+} from './common';
 import { customizeStatusBar, StatusBarView } from './statusbarSettings';
 import * as macos from './macos';
 import * as linux from './linux';
@@ -124,7 +127,38 @@ export function activate(context: vscode.ExtensionContext) {
 
   let lastVolume: number | undefined; // volume before muting, restored on unmute
 
+  const sendFeedback = () => vscode.env.openExternal(vscode.Uri.parse(feedbackUrl({
+    earworm: context.extension.packageJSON.version,
+    editor: `${vscode.env.appName} ${vscode.version}`,
+    os: `${process.platform} ${process.arch}`,
+    mode: webMode() ? 'Spotify Web API' : 'Spotify app on this computer (local)',
+  })));
+
+  // One "Enjoying Earworm?" note, ever: after two weeks and ten songs. Counted on this computer only.
+  const FEEDBACK_KEY = 'earworm.feedbackAsk';
+  let lastSong: string | undefined;
+  function countSong(state: PlayerState) {
+    if (state.kind !== 'running' || !state.track) return;
+    const key = `${state.track.name}\n${state.track.artist}`;
+    if (key === lastSong) return;
+    lastSong = key;
+    const ask = context.globalState.get<FeedbackAsk>(FEEDBACK_KEY) ?? { firstSong: Date.now(), songs: 0, asked: false };
+    if (ask.asked) return;
+    ask.songs++;
+    ask.asked = shouldAskFeedback(ask, Date.now());
+    void context.globalState.update(FEEDBACK_KEY, ask);
+    if (!ask.asked) return;
+    void vscode.window.showInformationMessage(
+      'Enjoying Earworm? A rating helps others find it, and a line of feedback shapes what comes next. This is the only time Earworm asks.',
+      'Rate It', 'Send Feedback', 'No Thanks',
+    ).then(choice => {
+      if (choice === 'Rate It') void vscode.env.openExternal(vscode.Uri.parse(reviewUrl(vscode.env.uriScheme)));
+      if (choice === 'Send Feedback') void sendFeedback();
+    });
+  }
+
   function render(state: PlayerState) {
+    countSong(state);
     const s = shown();
     const { prev, play, next, track } = bar;
     showIf(track, s.nowPlaying);
@@ -291,6 +325,7 @@ export function activate(context: vscode.ExtensionContext) {
     command('setUpWebApi', setUpWebApi),
     command('openDashboard', openDashboard),
     command('enterClientId', enterClientId),
+    vscode.commands.registerCommand('earworm.sendFeedback', sendFeedback),
     command('signIn', signIn),
     command('signOut', signOut),
     command('search', async () => {

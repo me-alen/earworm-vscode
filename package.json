@@ -14,6 +14,10 @@
     "type": "git",
     "url": "https://github.com/me-alen/earworm-vscode.git"
   },
+  "bugs": {
+    "url": "https://github.com/me-alen/earworm-vscode/issues"
+  },
+  "qna": "https://github.com/me-alen/earworm-vscode/issues/new/choose",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -152,6 +156,12 @@
         "title": "Move Status Bar Items to the Other Side",
         "category": "Earworm",
         "icon": "$(arrow-swap)"
+      },
+      {
+        "command": "earworm.sendFeedback",
+        "title": "Send Feedback",
+        "category": "Earworm",
+        "icon": "$(feedback)"
       }
     ],
     "viewsContainers": {
@@ -238,7 +248,7 @@
           {
             "id": "library",
             "title": "Browse your library",
-            "description": "Your queue, recently played, liked songs, playlists and albums are in the Earworm sidebar, with search and device switching at the top.\n[Open the Library](command:earworm.library.focus)",
+            "description": "Your queue, recently played, liked songs, playlists and albums are in the Earworm sidebar, with search and device switching at the top.\n[Open the Library](command:earworm.library.focus)\nIdeas, or something not working? Tell us with **Earworm: Send Feedback**.\n[Send Feedback](command:earworm.sendFeedback)",
             "media": {
               "markdown": "walkthrough/library.md"
             },
@@ -288,6 +298,11 @@
           "command": "earworm.toggleStatusBarSide",
           "when": "view == earworm.statusBar",
           "group": "navigation@1"
+        },
+        {
+          "command": "earworm.sendFeedback",
+          "when": "view == earworm.library",
+          "group": "z_feedback"
         }
       ],
       "view/item/context": [

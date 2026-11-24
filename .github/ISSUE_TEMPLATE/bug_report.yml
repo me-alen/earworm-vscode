@@ -1,0 +1,35 @@
+name: Bug report
+description: Something in Earworm doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: This becomes a public GitHub issue, so leave out anything private, such as your Client ID or account details.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead. Include any message Earworm showed.
+    validations:
+      required: true
+  - type: input
+    id: earworm
+    attributes:
+      label: Earworm version
+      description: In the Extensions view, next to Earworm's name.
+  - type: input
+    id: editor
+    attributes:
+      label: Editor
+      description: For example VS Code 1.106, Cursor, VSCodium.
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - Spotify app on this computer (local)
+        - Spotify Web API
