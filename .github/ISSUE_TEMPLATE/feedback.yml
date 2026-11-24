@@ -27,7 +27,7 @@ body:
     id: earworm
     attributes:
       label: Earworm version
-      description: Filled in by "Earworm: Send Feedback". Edit or clear any of these.
+      description: 'Filled in by "Earworm: Send Feedback". Edit or clear any of these.'
   - type: input
     id: editor
     attributes:
