@@ -228,6 +228,17 @@ export function activate(context: vscode.ExtensionContext) {
     }, 'Open Spotify Dashboard', 'I Have a Client ID');
     if (!choice) return;
     if (choice === 'Open Spotify Dashboard') await vscode.env.openExternal(vscode.Uri.parse(DASHBOARD));
+    await enterClientId();
+  }
+
+  // The walkthrough's two Web API steps: the setup dialog above, split in two.
+  async function openDashboard() {
+    await vscode.env.clipboard.writeText(REDIRECT_URI);
+    await vscode.env.openExternal(vscode.Uri.parse(DASHBOARD));
+    vscode.window.setStatusBarMessage(`$(check) Copied the redirect URI ${REDIRECT_URI}`, 10000);
+  }
+
+  async function enterClientId() {
     const id = await vscode.window.showInputBox({
       title: 'Spotify Client ID',
       prompt: `Paste the Client ID from your app in the Spotify dashboard. Redirect URI to register: ${REDIRECT_URI}`,
@@ -278,6 +289,8 @@ export function activate(context: vscode.ExtensionContext) {
       }
     }),
     command('setUpWebApi', setUpWebApi),
+    command('openDashboard', openDashboard),
+    command('enterClientId', enterClientId),
     command('signIn', signIn),
     command('signOut', signOut),
     command('search', async () => {
