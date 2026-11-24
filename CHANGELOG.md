@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.1 (2026-11-24)
 
 - **Earworm: Send Feedback** opens a short GitHub form with your Earworm version, editor, OS and mode filled in. Also in the Library's **…** menu and the walkthrough. Nothing is sent unless you submit it.
 - After two weeks and ten songs, Earworm asks once whether you'd like to rate it or send feedback, and never again.
