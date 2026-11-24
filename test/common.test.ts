@@ -1,6 +1,30 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { NotRunningError, Player, PlayerState, progressText, statusBarShown, WebApiUnavailableError, withFallback } from '../src/common';
+import {
+  feedbackUrl, NotRunningError, Player, PlayerState, progressText, reviewUrl, shouldAskFeedback, statusBarShown,
+  WebApiUnavailableError, withFallback,
+} from '../src/common';
+
+test('feedback form link fills in the details, spaces as %20', () => {
+  const url = feedbackUrl({ earworm: '0.6.0', editor: 'Visual Studio Code 1.106.0', os: 'darwin arm64', mode: 'Spotify Web API' });
+  assert.equal(url, 'https://github.com/me-alen/earworm-vscode/issues/new?template=feedback.yml&earworm=0.6.0'
+    + '&editor=Visual%20Studio%20Code%201.106.0&os=darwin%20arm64&mode=Spotify%20Web%20API');
+});
+
+test('rating goes to the store the editor installs from', () => {
+  assert.match(reviewUrl('vscode'), /marketplace\.visualstudio\.com/);
+  assert.match(reviewUrl('vscode-insiders'), /marketplace\.visualstudio\.com/);
+  for (const other of ['cursor', 'vscodium', 'windsurf']) assert.match(reviewUrl(other), /open-vsx\.org/);
+});
+
+test('feedback is asked once, after two weeks and ten songs', () => {
+  const day = 24 * 60 * 60 * 1000;
+  const now = 100 * day;
+  assert.equal(shouldAskFeedback({ firstSong: now - 15 * day, songs: 10, asked: false }, now), true);
+  assert.equal(shouldAskFeedback({ firstSong: now - 15 * day, songs: 9, asked: false }, now), false, 'too few songs');
+  assert.equal(shouldAskFeedback({ firstSong: now - 13 * day, songs: 50, asked: false }, now), false, 'too soon');
+  assert.equal(shouldAskFeedback({ firstSong: now - 15 * day, songs: 50, asked: true }, now), false, 'never twice');
+});
 
 test('progress bar text', () => {
   assert.deepEqual(progressText(83, 225), { text: '1:23 ━━━━────── 3:45', label: '1:23 of 3:45' });

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- **Earworm: Send Feedback** opens a short GitHub form with your Earworm version, editor, OS and mode filled in. Also in the Library's **…** menu and the walkthrough. Nothing is sent unless you submit it.
+- After two weeks and ten songs, Earworm asks once whether you'd like to rate it or send feedback, and never again.
+
 ## 0.6.0 (2026-11-24)
 
 - A **Get Started with Earworm** walkthrough: play from the Spotify app, choose what the status bar shows, then optionally create your Spotify app, sign in and open your library, one step at a time. VS Code opens it when you install Earworm, and the Library sidebar links to it.
